@@ -13,9 +13,14 @@
 </head>
 <body data-i18n-title="title" translate="no">
 
+<!-- Звёзды ПЕРВЫМИ в DOM, но z-index: -1 (в CSS) — будут позади всего -->
 <canvas id="space"></canvas>
+
+<!-- Пояса -->
 <canvas id="asteroids3d"></canvas>
 <canvas id="kuiper3d"></canvas>
+
+<!-- Планеты и объекты -->
 <canvas id="earth3d"></canvas>
 <canvas id="moon3d"></canvas>
 <canvas id="mars3d"></canvas>
@@ -25,7 +30,9 @@
 <canvas id="neptune3d"></canvas>
 <canvas id="pluto3d"></canvas>
 <canvas id="iss3d"></canvas>
-<canvas id="voyager3d"></canvas>          <!-- ← НОВОЕ -->
+<canvas id="voyager3d"></canvas>
+
+<!-- UI сверху -->
 <canvas id="ui-canvas"></canvas>
 
 <div class="ui">
@@ -79,7 +86,7 @@
 <script src="js/neptune.js"></script>
 <script src="js/pluto.js"></script>
 <script src="js/iss3d.js"></script>
-<script src="js/voyager3d.js"></script>          <!-- ← НОВОЕ -->
+<script src="js/voyager3d.js"></script>
 <script src="js/asteroids3d.js"></script>
 <script src="js/kuiper3d.js"></script>
 <script src="js/ui.js"></script>

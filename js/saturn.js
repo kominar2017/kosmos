@@ -1,5 +1,5 @@
 /* =========================================================
-   SATURN 3D — Сатурн с кольцами + Титан
+   SATURN 3D — Сатурн с кольцами + Титан с текстурой
    ========================================================= */
 
 const SATURN_RADIUS_KM   = 58232;
@@ -36,7 +36,6 @@ const saturnUniforms = {
 
 const saturnMat = new THREE.ShaderMaterial({
   uniforms: saturnUniforms,
-  side: THREE.DoubleSide,
   vertexShader: `
     varying vec2 vUv; varying vec3 vNormal; varying vec3 vViewDir; varying vec3 vWorldPos;
     void main() {
@@ -100,11 +99,32 @@ ringGroup.add(ringMesh);
 ringGroup.rotation.x = Math.PI / 2;
 saturnGroup.add(ringGroup);
 
-/* ---------- ТИТАН ---------- */
-const titanMat = new THREE.MeshStandardMaterial({ color: 0xffaa55, roughness: 0.95, metalness: 0.05 });
-const titanMesh = new THREE.Mesh(new THREE.SphereGeometry(1, 32, 32), titanMat);
+/* ---------- ТИТАН с текстурой ---------- */
+const titanMat = new THREE.MeshStandardMaterial({
+  color: 0xffaa55,        /* fallback — оранжевый, если текстура не загрузится */
+  roughness: 0.95,
+  metalness: 0.05,
+  emissive: 0x000000,
+  emissiveIntensity: 0,
+  map: null
+});
+
+const titanMesh = new THREE.Mesh(new THREE.SphereGeometry(1, 48, 48), titanMat);
 saturnScene.add(titanMesh);
 
+texLoader.load('textures/titan.jpg', (tex) => {
+  tex.anisotropy = saturnRenderer.capabilities.getMaxAnisotropy();
+  tex.encoding = THREE.sRGBEncoding;
+  tex.minFilter = THREE.LinearMipmapLinearFilter;
+  tex.magFilter = THREE.LinearFilter;
+  tex.generateMipmaps = true;
+  titanMat.map = tex;
+  titanMat.color.set(0xffffff);
+  titanMat.needsUpdate = true;
+  console.log('[THREE] Титан загружен');
+}, undefined, () => console.warn('[THREE] titan.jpg не найден — используется цвет'));
+
+/* Ореол Сатурна */
 const saturnHaloMat = new THREE.ShaderMaterial({
   uniforms: { color: { value: new THREE.Color(0xffe8b0) }, intensity: { value: 0.25 } },
   vertexShader: `
@@ -207,6 +227,7 @@ function updateSaturn(km, dt) {
   ringMesh.rotation.z += 0.0018 * (dt / 0.016);
   ringMat.opacity = 0.92 + Math.sin(globalTime * 0.8) * 0.08;
 
+  /* Титан — на орбите снаружи колец, с текстурой */
   const titanAngle = globalTime * 0.15;
   const titanOrbit = scale * 4.5;
   titanMesh.position.set(

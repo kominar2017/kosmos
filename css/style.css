@@ -12,8 +12,10 @@ html[data-lang="zh"] input {
   font-family: 'Noto Sans SC', 'Space Mono', monospace;
 }
 
-/* ===== Z-INDEX ИСПРАВЛЕН: #space=0, пояса=1, планеты=2, UI=4 ===== */
-#space       { position: fixed; inset: 0; z-index: 0; }
+/* =========================================================
+   Z-INDEX — звёзды на 0, планеты на 2
+   ========================================================= */
+#space       { position: fixed; inset: 0; z-index: 0; background: #000; }
 #asteroids3d { position: fixed; left: 0; top: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none; }
 #kuiper3d    { position: fixed; left: 0; top: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none; }
 #earth3d     { position: fixed; left: 0; top: 0; width: 100vw; height: 100vh; z-index: 2; pointer-events: none; }

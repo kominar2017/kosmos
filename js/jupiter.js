@@ -1,6 +1,6 @@
 /* =========================================================
    JUPITER 3D — Юпитер + 4 галилеевых луны с текстурами
-   Камера всегда снаружи сферы.
+   Как у Марса: прозрачный фон, fade, звёзды вокруг.
    ========================================================= */
 
 const JUPITER_RADIUS_KM   = 69911;
@@ -20,12 +20,7 @@ jupiterRenderer.toneMapping = THREE.ACESFilmicToneMapping;
 jupiterRenderer.toneMappingExposure = 0.85;
 
 const jupiterScene = new THREE.Scene();
-const jupiterCamera = new THREE.PerspectiveCamera(
-  45,
-  window.innerWidth / window.innerHeight,
-  0.1,
-  20000
-);
+const jupiterCamera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 20000);
 jupiterCamera.position.set(0, 0, 3.2);
 jupiterCamera.lookAt(0, 0, 0);
 
@@ -42,12 +37,8 @@ const jupiterUniforms = {
 
 const jupiterMat = new THREE.ShaderMaterial({
   uniforms: jupiterUniforms,
-  side: THREE.DoubleSide,
   vertexShader: `
-    varying vec2 vUv;
-    varying vec3 vNormal;
-    varying vec3 vViewDir;
-    varying vec3 vWorldPos;
+    varying vec2 vUv; varying vec3 vNormal; varying vec3 vViewDir; varying vec3 vWorldPos;
     void main() {
       vUv = uv;
       vNormal = normalize(normalMatrix * normal);
@@ -58,32 +49,19 @@ const jupiterMat = new THREE.ShaderMaterial({
     }
   `,
   fragmentShader: `
-    uniform sampler2D map;
-    uniform vec3 sunDirection;
-    uniform vec3 rimColor;
-    uniform vec3 earthshine;
-    uniform float rimStrength;
-    uniform float earthshineStrength;
-    varying vec2 vUv;
-    varying vec3 vNormal;
-    varying vec3 vViewDir;
-    varying vec3 vWorldPos;
-
+    uniform sampler2D map; uniform vec3 sunDirection; uniform vec3 rimColor; uniform vec3 earthshine;
+    uniform float rimStrength; uniform float earthshineStrength;
+    varying vec2 vUv; varying vec3 vNormal; varying vec3 vViewDir; varying vec3 vWorldPos;
     void main() {
       vec3 base = texture2D(map, vUv).rgb;
       if (base.r + base.g + base.b < 0.01) base = vec3(0.85, 0.72, 0.55);
-
       float sunDot = dot(vNormal, sunDirection);
       float lit = smoothstep(-0.35, 0.35, sunDot);
-
       vec3 color = base * (0.10 + 0.75 * lit);
-
       float fres = pow(1.0 - max(dot(vNormal, vViewDir), 0.0), 3.0);
       color += rimColor * fres * rimStrength * lit;
-
       float shadowZone = (1.0 - lit) * smoothstep(-0.3, -0.05, sunDot);
       color += earthshine * shadowZone * earthshineStrength;
-
       gl_FragColor = vec4(color, 1.0);
     }
   `
@@ -116,35 +94,26 @@ GALILEAN_MOONS.forEach((m) => {
   mesh.scale.setScalar(m.size);
   jupiterScene.add(mesh);
 
-  texLoader.load(
-    'textures/' + m.texture,
-    (tex) => {
-      tex.anisotropy = jupiterRenderer.capabilities.getMaxAnisotropy();
-      tex.encoding = THREE.sRGBEncoding;
-      tex.minFilter = THREE.LinearMipmapLinearFilter;
-      tex.magFilter = THREE.LinearFilter;
-      tex.generateMipmaps = true;
-      mat.map = tex;
-      mat.color.set(0xffffff);
-      mat.needsUpdate = true;
-      console.log('[THREE] Луна Юпитера загружена:', m.name);
-    },
-    undefined,
-    () => console.warn('[THREE] Текстура не найдена:', m.texture)
-  );
+  texLoader.load('textures/' + m.texture, (tex) => {
+    tex.anisotropy = jupiterRenderer.capabilities.getMaxAnisotropy();
+    tex.encoding = THREE.sRGBEncoding;
+    tex.minFilter = THREE.LinearMipmapLinearFilter;
+    tex.magFilter = THREE.LinearFilter;
+    tex.generateMipmaps = true;
+    mat.map = tex;
+    mat.color.set(0xffffff);
+    mat.needsUpdate = true;
+    console.log('[THREE] Луна Юпитера загружена:', m.name);
+  }, undefined, () => console.warn('[THREE] Текстура не найдена:', m.texture));
 
   galileanMeshes.push({ mesh, moon: m, angle: m.angle });
 });
 
 /* Ореол Юпитера */
 const jupiterHaloMat = new THREE.ShaderMaterial({
-  uniforms: {
-    color: { value: new THREE.Color(0xffd0a0) },
-    intensity: { value: 0.3 }
-  },
+  uniforms: { color: { value: new THREE.Color(0xffd0a0) }, intensity: { value: 0.3 } },
   vertexShader: `
-    varying vec3 vNormal;
-    varying vec3 vPosition;
+    varying vec3 vNormal; varying vec3 vPosition;
     void main() {
       vNormal = normalize(normalMatrix * normal);
       vPosition = position;
@@ -152,10 +121,8 @@ const jupiterHaloMat = new THREE.ShaderMaterial({
     }
   `,
   fragmentShader: `
-    uniform vec3 color;
-    uniform float intensity;
-    varying vec3 vNormal;
-    varying vec3 vPosition;
+    uniform vec3 color; uniform float intensity;
+    varying vec3 vNormal; varying vec3 vPosition;
     void main() {
       vec3 viewDir = normalize(cameraPosition - vPosition);
       float facing = dot(vNormal, viewDir);
@@ -163,18 +130,13 @@ const jupiterHaloMat = new THREE.ShaderMaterial({
       gl_FragColor = vec4(color, rim * intensity);
     }
   `,
-  transparent: true,
-  blending: THREE.AdditiveBlending,
-  side: THREE.BackSide,
-  depthWrite: false
+  transparent: true, blending: THREE.AdditiveBlending, side: THREE.BackSide, depthWrite: false
 });
 
 const jupiterHalo = new THREE.Mesh(new THREE.SphereGeometry(1.06, 64, 64), jupiterHaloMat);
 jupiterScene.add(jupiterHalo);
 
-const jupiterAmbient = new THREE.AmbientLight(0x3a2a1a, 0.4);
-jupiterScene.add(jupiterAmbient);
-
+jupiterScene.add(new THREE.AmbientLight(0x3a2a1a, 0.4));
 const jupiterSunLight = new THREE.DirectionalLight(0xfff0e0, 1.2);
 jupiterSunLight.position.set(0.7, 0.4, 0.5);
 jupiterScene.add(jupiterSunLight);
@@ -190,8 +152,7 @@ texLoader.load('textures/jupiter.jpg', (tex) => {
 }, undefined, () => console.warn('[THREE] jupiter.jpg не найден'));
 
 function resizeJupiter() {
-  const w = window.innerWidth;
-  const h = window.innerHeight;
+  const w = window.innerWidth, h = window.innerHeight;
   jupiterRenderer.setSize(w, h, false);
   jupiterCamera.aspect = w / h;
   jupiterCamera.updateProjectionMatrix();
@@ -202,20 +163,14 @@ window.addEventListener('resize', resizeJupiter);
 function updateJupiter(km, dt) {
   dt = dt || 0.016;
   if (typeof orbitMode !== 'undefined' && orbitMode) return;
-
   if (km < JUPITER_APPEAR_KM || km >= JUPITER_VANISH_KM) {
     jupiterCanvas.style.opacity = '0';
     return;
   }
-
   const fadeIn  = Math.min(1, (km - JUPITER_APPEAR_KM) / ((JUPITER_PEAK_KM - JUPITER_APPEAR_KM) * 0.5));
   const fadeOut = Math.min(1, (JUPITER_VANISH_KM - km) / ((JUPITER_VANISH_KM - JUPITER_PEAK_KM) * 0.5));
   const visibility = Math.min(fadeIn, fadeOut);
-
-  if (visibility <= 0.01) {
-    jupiterCanvas.style.opacity = '0';
-    return;
-  }
+  if (visibility <= 0.01) { jupiterCanvas.style.opacity = '0'; return; }
 
   let scale;
   if (km <= JUPITER_PEAK_KM) {
@@ -231,16 +186,13 @@ function updateJupiter(km, dt) {
   let xPos, yPos;
   if (km <= JUPITER_PEAK_KM) {
     const t = (km - JUPITER_APPEAR_KM) / (JUPITER_PEAK_KM - JUPITER_APPEAR_KM);
-    xPos = 0;
-    yPos = 0.5 - t * 0.2;
+    xPos = 0; yPos = 0.5 - t * 0.2;
   } else {
     const k = (km - JUPITER_PEAK_KM) / (JUPITER_VANISH_KM - JUPITER_PEAK_KM);
-    xPos = k * k * 5.5;
-    yPos = 0.3 + k * k * 3.0 + k * 0.3;
+    xPos = k * k * 5.5; yPos = 0.3 + k * k * 3.0 + k * 0.3;
   }
 
   jupiterCanvas.style.opacity = String(visibility);
-
   jupiterMesh.position.set(xPos, yPos, 0);
   jupiterMesh.scale.setScalar(scale);
   jupiterMesh.rotation.y += 0.0008 * 2.4 * (dt / 0.016);
@@ -249,10 +201,11 @@ function updateJupiter(km, dt) {
   galileanMeshes.forEach((g) => {
     g.angle += g.moon.speed * dt;
     const orbitR = g.moon.orbit * scale;
-    const lx = xPos + Math.cos(g.angle) * orbitR;
-    const ly = yPos + Math.sin(g.angle) * orbitR * 0.3;
-    const lz = -0.2 + Math.sin(g.angle) * 0.1;
-    g.mesh.position.set(lx, ly, lz);
+    g.mesh.position.set(
+      xPos + Math.cos(g.angle) * orbitR,
+      yPos + Math.sin(g.angle) * orbitR * 0.3,
+      -0.2 + Math.sin(g.angle) * 0.1
+    );
     g.mesh.scale.setScalar(g.moon.size * scale);
     g.mesh.rotation.y += 0.001 * (dt / 0.016);
   });
@@ -260,7 +213,6 @@ function updateJupiter(km, dt) {
   jupiterHalo.position.copy(jupiterMesh.position);
   jupiterHalo.scale.setScalar(scale);
 
-  /* Камера ВСЕГДА снаружи сферы */
   jupiterCamera.position.set(0, 0, Math.max(3.2, scale * 2.5));
   jupiterCamera.lookAt(xPos * 0.3, yPos * 0.3, 0);
   jupiterCamera.updateProjectionMatrix();
