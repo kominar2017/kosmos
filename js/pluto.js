@@ -1,10 +1,5 @@
 /* =========================================================
-   PLUTO 3D — Плутон + Харон (с текстурами)
-   Наклон 122.5° — лежит на боку.
-   Радиус: 1188 км.
-   Появление:   5 905 610 000 км
-   Пик:         5 906 000 000 км
-   Исчезновение: 5 906 390 000 км
+   PLUTO 3D — Плутон + Харон
    ========================================================= */
 
 const PLUTO_RADIUS_KM   = 1188;
@@ -24,12 +19,7 @@ plutoRenderer.toneMapping = THREE.ACESFilmicToneMapping;
 plutoRenderer.toneMappingExposure = 1.0;
 
 const plutoScene = new THREE.Scene();
-const plutoCamera = new THREE.PerspectiveCamera(
-  45,
-  window.innerWidth / window.innerHeight,
-  0.1,
-  20000
-);
+const plutoCamera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 20000);
 plutoCamera.position.set(0, 0, 3.2);
 plutoCamera.lookAt(0, 0, 0);
 
@@ -46,11 +36,9 @@ const plutoUniforms = {
 
 const plutoMat = new THREE.ShaderMaterial({
   uniforms: plutoUniforms,
+  side: THREE.DoubleSide,
   vertexShader: `
-    varying vec2 vUv;
-    varying vec3 vNormal;
-    varying vec3 vViewDir;
-    varying vec3 vWorldPos;
+    varying vec2 vUv; varying vec3 vNormal; varying vec3 vViewDir; varying vec3 vWorldPos;
     void main() {
       vUv = uv;
       vNormal = normalize(normalMatrix * normal);
@@ -61,65 +49,38 @@ const plutoMat = new THREE.ShaderMaterial({
     }
   `,
   fragmentShader: `
-    uniform sampler2D map;
-    uniform vec3 sunDirection;
-    uniform vec3 rimColor;
-    uniform vec3 earthshine;
-    uniform float rimStrength;
-    uniform float earthshineStrength;
-    varying vec2 vUv;
-    varying vec3 vNormal;
-    varying vec3 vViewDir;
-    varying vec3 vWorldPos;
-
+    uniform sampler2D map; uniform vec3 sunDirection; uniform vec3 rimColor; uniform vec3 earthshine;
+    uniform float rimStrength; uniform float earthshineStrength;
+    varying vec2 vUv; varying vec3 vNormal; varying vec3 vViewDir; varying vec3 vWorldPos;
     void main() {
       vec3 base = texture2D(map, vUv).rgb;
       if (base.r + base.g + base.b < 0.01) base = vec3(0.75, 0.65, 0.55);
-
       float sunDot = dot(vNormal, sunDirection);
       float lit = smoothstep(-0.35, 0.35, sunDot);
-
       vec3 color = base * (0.10 + 0.95 * lit);
-
       float fres = pow(1.0 - max(dot(vNormal, vViewDir), 0.0), 3.0);
       color += rimColor * fres * rimStrength * lit;
-
       float shadowZone = (1.0 - lit) * smoothstep(-0.3, -0.05, sunDot);
       color += earthshine * shadowZone * earthshineStrength;
-
       gl_FragColor = vec4(color, 1.0);
     }
   `
 });
 
-/* Группа — наклон 122.5° */
 const plutoGroup = new THREE.Group();
 plutoScene.add(plutoGroup);
 
-/* Планета */
 const plutoMesh = new THREE.Mesh(new THREE.SphereGeometry(1, 96, 96), plutoMat);
 plutoGroup.add(plutoMesh);
 
-/* ---------- ХАРОН — большой спутник (с текстурой) ---------- */
-const charonMat = new THREE.MeshStandardMaterial({
-  color: 0xffffff,
-  roughness: 0.9,
-  metalness: 0.05,
-  map: null
-});
-
+const charonMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9, metalness: 0.05, map: null });
 const charonMesh = new THREE.Mesh(new THREE.SphereGeometry(1, 48, 48), charonMat);
 plutoScene.add(charonMesh);
 
-/* Ореол */
 const plutoHaloMat = new THREE.ShaderMaterial({
-  uniforms: {
-    color: { value: new THREE.Color(0xc8b8a8) },
-    intensity: { value: 0.3 }
-  },
+  uniforms: { color: { value: new THREE.Color(0xc8b8a8) }, intensity: { value: 0.3 } },
   vertexShader: `
-    varying vec3 vNormal;
-    varying vec3 vPosition;
+    varying vec3 vNormal; varying vec3 vPosition;
     void main() {
       vNormal = normalize(normalMatrix * normal);
       vPosition = position;
@@ -127,10 +88,8 @@ const plutoHaloMat = new THREE.ShaderMaterial({
     }
   `,
   fragmentShader: `
-    uniform vec3 color;
-    uniform float intensity;
-    varying vec3 vNormal;
-    varying vec3 vPosition;
+    uniform vec3 color; uniform float intensity;
+    varying vec3 vNormal; varying vec3 vPosition;
     void main() {
       vec3 viewDir = normalize(cameraPosition - vPosition);
       float facing = dot(vNormal, viewDir);
@@ -138,23 +97,17 @@ const plutoHaloMat = new THREE.ShaderMaterial({
       gl_FragColor = vec4(color, rim * intensity);
     }
   `,
-  transparent: true,
-  blending: THREE.AdditiveBlending,
-  side: THREE.BackSide,
-  depthWrite: false
+  transparent: true, blending: THREE.AdditiveBlending, side: THREE.BackSide, depthWrite: false
 });
 
 const plutoHalo = new THREE.Mesh(new THREE.SphereGeometry(1.06, 64, 64), plutoHaloMat);
 plutoGroup.add(plutoHalo);
 
-const plutoAmbient = new THREE.AmbientLight(0x3a2a1a, 0.4);
-plutoScene.add(plutoAmbient);
-
+plutoScene.add(new THREE.AmbientLight(0x3a2a1a, 0.4));
 const plutoSunLight = new THREE.DirectionalLight(0xfff0e0, 1.0);
 plutoSunLight.position.set(0.7, 0.4, 0.5);
 plutoScene.add(plutoSunLight);
 
-/* Текстуры */
 texLoader.load('textures/pluto.jpg', (tex) => {
   tex.anisotropy = plutoRenderer.capabilities.getMaxAnisotropy();
   tex.encoding = THREE.sRGBEncoding;
@@ -165,7 +118,6 @@ texLoader.load('textures/pluto.jpg', (tex) => {
   console.log('[THREE] Плутон загружен');
 }, undefined, () => console.warn('[THREE] pluto.jpg не найден'));
 
-/* Харон — формат .jfif (JFIF = JPEG) */
 texLoader.load('textures/charon.jfif', (tex) => {
   tex.anisotropy = plutoRenderer.capabilities.getMaxAnisotropy();
   tex.encoding = THREE.sRGBEncoding;
@@ -179,8 +131,7 @@ texLoader.load('textures/charon.jfif', (tex) => {
 }, undefined, () => console.warn('[THREE] charon.jfif не найден'));
 
 function resizePluto() {
-  const w = window.innerWidth;
-  const h = window.innerHeight;
+  const w = window.innerWidth, h = window.innerHeight;
   plutoRenderer.setSize(w, h, false);
   plutoCamera.aspect = w / h;
   plutoCamera.updateProjectionMatrix();
@@ -188,27 +139,17 @@ function resizePluto() {
 resizePluto();
 window.addEventListener('resize', resizePluto);
 
-/* =========================================================
-   ЛОГИКА ПЛУТОНА
-   ========================================================= */
 function updatePluto(km, dt) {
   dt = dt || 0.016;
-
   if (typeof orbitMode !== 'undefined' && orbitMode) return;
-
   if (km < PLUTO_APPEAR_KM || km >= PLUTO_VANISH_KM) {
     plutoCanvas.style.opacity = '0';
     return;
   }
-
   const fadeIn  = Math.min(1, (km - PLUTO_APPEAR_KM) / ((PLUTO_PEAK_KM - PLUTO_APPEAR_KM) * 0.5));
   const fadeOut = Math.min(1, (PLUTO_VANISH_KM - km) / ((PLUTO_VANISH_KM - PLUTO_PEAK_KM) * 0.5));
   const visibility = Math.min(fadeIn, fadeOut);
-
-  if (visibility <= 0.01) {
-    plutoCanvas.style.opacity = '0';
-    return;
-  }
+  if (visibility <= 0.01) { plutoCanvas.style.opacity = '0'; return; }
 
   let scale;
   if (km <= PLUTO_PEAK_KM) {
@@ -224,23 +165,19 @@ function updatePluto(km, dt) {
   let xPos, yPos;
   if (km <= PLUTO_PEAK_KM) {
     const t = (km - PLUTO_APPEAR_KM) / (PLUTO_PEAK_KM - PLUTO_APPEAR_KM);
-    xPos = 0;
-    yPos = 0.5 - t * 0.2;
+    xPos = 0; yPos = 0.5 - t * 0.2;
   } else {
     const k = (km - PLUTO_PEAK_KM) / (PLUTO_VANISH_KM - PLUTO_PEAK_KM);
-    xPos = k * k * 5.5;
-    yPos = 0.3 + k * k * 3.0 + k * 0.3;
+    xPos = k * k * 5.5; yPos = 0.3 + k * k * 3.0 + k * 0.3;
   }
 
   plutoCanvas.style.opacity = String(visibility);
-
   plutoGroup.position.set(xPos, yPos, 0);
   plutoGroup.scale.setScalar(scale);
-  plutoGroup.rotation.z = 2.138;   /* 122.5° */
+  plutoGroup.rotation.z = 2.138;
 
   plutoMesh.rotation.y += 0.0002 * (dt / 0.016);
 
-  /* Харон — с текстурой, кружит рядом */
   const charonAngle = globalTime * 0.08;
   charonMesh.position.set(
     xPos + Math.cos(charonAngle) * scale * 3.0,
@@ -253,7 +190,7 @@ function updatePluto(km, dt) {
   plutoHalo.position.copy(plutoMesh.position);
   plutoHalo.scale.setScalar(scale);
 
-  plutoCamera.position.set(0, scale * 0.4, Math.max(3.2, scale * 2.0));
+  plutoCamera.position.set(0, scale * 0.4, Math.max(3.2, scale * 2.6));
   plutoCamera.lookAt(xPos * 0.3, yPos * 0.3, 0);
   plutoCamera.updateProjectionMatrix();
 

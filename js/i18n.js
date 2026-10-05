@@ -43,7 +43,8 @@ const TRANSLATIONS = {
     'rv_interplanet': 'Межпланетный космос', 'rv_marsPeak': 'Марс — пик',
     'rv_belt': 'Пояс астероидов', 'rv_jupiterPeak': 'Юпитер — пик',
     'rv_saturnPeak': 'Сатурн — пик', 'rv_uranusPeak': 'Уран — пик',
-    'rv_neptunePeak': 'Нептун — пик', 'rv_kuiper': 'Пояс Койпера', 'rv_plutoPeak': 'Плутон — пик'
+    'rv_neptunePeak': 'Нептун — пик', 'rv_kuiper': 'Пояс Койпера', 'rv_plutoPeak': 'Плутон — пик',
+    'rv_voyager': 'Вояджер'
   },
 
   en: {
@@ -86,7 +87,8 @@ const TRANSLATIONS = {
     'rv_interplanet': 'Interplanetary space', 'rv_marsPeak': 'Mars — peak',
     'rv_belt': 'Asteroid belt', 'rv_jupiterPeak': 'Jupiter — peak',
     'rv_saturnPeak': 'Saturn — peak', 'rv_uranusPeak': 'Uranus — peak',
-    'rv_neptunePeak': 'Neptune — peak', 'rv_kuiper': 'Kuiper belt', 'rv_plutoPeak': 'Pluto — peak'
+    'rv_neptunePeak': 'Neptune — peak', 'rv_kuiper': 'Kuiper belt', 'rv_plutoPeak': 'Pluto — peak',
+    'rv_voyager': 'Voyager'
   },
 
   es: {
@@ -127,7 +129,8 @@ const TRANSLATIONS = {
     'rv_interplanet': 'Espacio interplanetario', 'rv_marsPeak': 'Marte — máximo',
     'rv_belt': 'Cinturón de asteroides', 'rv_jupiterPeak': 'Júpiter — máximo',
     'rv_saturnPeak': 'Saturno — máximo', 'rv_uranusPeak': 'Urano — máximo',
-    'rv_neptunePeak': 'Neptuno — máximo', 'rv_kuiper': 'Cinturón de Kuiper', 'rv_plutoPeak': 'Plutón — máximo'
+    'rv_neptunePeak': 'Neptuno — máximo', 'rv_kuiper': 'Cinturón de Kuiper', 'rv_plutoPeak': 'Plutón — máximo',
+    'rv_voyager': 'Voyager'
   },
 
   fr: {
@@ -168,7 +171,8 @@ const TRANSLATIONS = {
     'rv_interplanet': 'Espace interplanétaire', 'rv_marsPeak': 'Mars — pic',
     'rv_belt': 'Ceinture d\'astéroïdes', 'rv_jupiterPeak': 'Jupiter — pic',
     'rv_saturnPeak': 'Saturne — pic', 'rv_uranusPeak': 'Uranus — pic',
-    'rv_neptunePeak': 'Neptune — pic', 'rv_kuiper': 'Ceinture de Kuiper', 'rv_plutoPeak': 'Pluton — pic'
+    'rv_neptunePeak': 'Neptune — pic', 'rv_kuiper': 'Ceinture de Kuiper', 'rv_plutoPeak': 'Pluton — pic',
+    'rv_voyager': 'Voyager'
   },
 
   pt: {
@@ -209,7 +213,8 @@ const TRANSLATIONS = {
     'rv_interplanet': 'Espaço interplanetário', 'rv_marsPeak': 'Marte — pico',
     'rv_belt': 'Cinturão de asteroides', 'rv_jupiterPeak': 'Júpiter — pico',
     'rv_saturnPeak': 'Saturno — pico', 'rv_uranusPeak': 'Urano — pico',
-    'rv_neptunePeak': 'Netuno — pico', 'rv_kuiper': 'Cinturão de Kuiper', 'rv_plutoPeak': 'Plutão — pico'
+    'rv_neptunePeak': 'Netuno — pico', 'rv_kuiper': 'Cinturão de Kuiper', 'rv_plutoPeak': 'Plutão — pico',
+    'rv_voyager': 'Voyager'
   },
 
   zh: {
@@ -249,7 +254,8 @@ const TRANSLATIONS = {
     'rv_interplanet': '行星际空间', 'rv_marsPeak': '火星 — 巅峰',
     'rv_belt': '小行星带', 'rv_jupiterPeak': '木星 — 巅峰',
     'rv_saturnPeak': '土星 — 巅峰', 'rv_uranusPeak': '天王星 — 巅峰',
-    'rv_neptunePeak': '海王星 — 巅峰', 'rv_kuiper': '柯伊伯带', 'rv_plutoPeak': '冥王星 — 巅峰'
+    'rv_neptunePeak': '海王星 — 巅峰', 'rv_kuiper': '柯伊伯带', 'rv_plutoPeak': '冥王星 — 巅峰',
+    'rv_voyager': '旅行者号'
   }
 };
 
@@ -289,17 +295,12 @@ function applyTranslations() {
   document.querySelectorAll('[data-i18n]').forEach(el => {
     const key = el.getAttribute('data-i18n');
     const val = t(key);
-
-    /* Защита от автоперевода браузера */
     el.setAttribute('translate', 'no');
     el.classList.add('notranslate');
-
-    /* Убрать вставки ya-tr-span / google-translate */
     el.querySelectorAll('ya-tr-span, .ya-tr-span, font').forEach(sp => {
       const txt = sp.textContent;
       sp.replaceWith(document.createTextNode(txt));
     });
-
     if (el.textContent !== val) el.textContent = val;
   });
 

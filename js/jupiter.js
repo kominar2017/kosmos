@@ -1,6 +1,6 @@
 /* =========================================================
    JUPITER 3D — Юпитер + 4 галилеевых луны с текстурами
-   Медленнее, разные цвета, лёгкое свечение.
+   Камера всегда снаружи сферы.
    ========================================================= */
 
 const JUPITER_RADIUS_KM   = 69911;
@@ -42,6 +42,7 @@ const jupiterUniforms = {
 
 const jupiterMat = new THREE.ShaderMaterial({
   uniforms: jupiterUniforms,
+  side: THREE.DoubleSide,
   vertexShader: `
     varying vec2 vUv;
     varying vec3 vNormal;
@@ -103,22 +104,18 @@ const galileanMeshes = [];
 
 GALILEAN_MOONS.forEach((m) => {
   const geo = new THREE.SphereGeometry(1, 32, 32);
-
-  /* Материал с текстурой (map загрузится асинхронно) */
   const mat = new THREE.MeshStandardMaterial({
-    color: m.color,             // fallback — если текстура не загрузится
+    color: m.color,
     roughness: 0.9,
     metalness: 0.02,
     emissive: 0x000000,
     emissiveIntensity: 0,
     map: null
   });
-
   const mesh = new THREE.Mesh(geo, mat);
   mesh.scale.setScalar(m.size);
   jupiterScene.add(mesh);
 
-  /* Загрузка текстуры */
   texLoader.load(
     'textures/' + m.texture,
     (tex) => {
@@ -128,15 +125,12 @@ GALILEAN_MOONS.forEach((m) => {
       tex.magFilter = THREE.LinearFilter;
       tex.generateMipmaps = true;
       mat.map = tex;
-      mat.color.set(0xffffff);       // белый цвет, чтобы текстура была яркой
+      mat.color.set(0xffffff);
       mat.needsUpdate = true;
       console.log('[THREE] Луна Юпитера загружена:', m.name);
     },
     undefined,
-    () => {
-      console.warn('[THREE] Текстура не найдена:', m.texture, '— используется цвет');
-      // fallback: цвет уже установлен, ничего делать не надо
-    }
+    () => console.warn('[THREE] Текстура не найдена:', m.texture)
   );
 
   galileanMeshes.push({ mesh, moon: m, angle: m.angle });
@@ -185,7 +179,6 @@ const jupiterSunLight = new THREE.DirectionalLight(0xfff0e0, 1.2);
 jupiterSunLight.position.set(0.7, 0.4, 0.5);
 jupiterScene.add(jupiterSunLight);
 
-/* Текстура Юпитера */
 texLoader.load('textures/jupiter.jpg', (tex) => {
   tex.anisotropy = jupiterRenderer.capabilities.getMaxAnisotropy();
   tex.encoding = THREE.sRGBEncoding;
@@ -206,12 +199,8 @@ function resizeJupiter() {
 resizeJupiter();
 window.addEventListener('resize', resizeJupiter);
 
-/* =========================================================
-   ЛОГИКА ЮПИТЕРА
-   ========================================================= */
 function updateJupiter(km, dt) {
   dt = dt || 0.016;
-
   if (typeof orbitMode !== 'undefined' && orbitMode) return;
 
   if (km < JUPITER_APPEAR_KM || km >= JUPITER_VANISH_KM) {
@@ -257,7 +246,6 @@ function updateJupiter(km, dt) {
   jupiterMesh.rotation.y += 0.0008 * 2.4 * (dt / 0.016);
   jupiterMesh.rotation.z = 0.0546;
 
-  /* Галилеевы луны с текстурами */
   galileanMeshes.forEach((g) => {
     g.angle += g.moon.speed * dt;
     const orbitR = g.moon.orbit * scale;
@@ -272,7 +260,8 @@ function updateJupiter(km, dt) {
   jupiterHalo.position.copy(jupiterMesh.position);
   jupiterHalo.scale.setScalar(scale);
 
-  jupiterCamera.position.set(0, 0, Math.max(3.2, scale * 1.8));
+  /* Камера ВСЕГДА снаружи сферы */
+  jupiterCamera.position.set(0, 0, Math.max(3.2, scale * 2.5));
   jupiterCamera.lookAt(xPos * 0.3, yPos * 0.3, 0);
   jupiterCamera.updateProjectionMatrix();
 

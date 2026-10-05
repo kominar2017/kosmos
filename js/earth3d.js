@@ -1,5 +1,6 @@
 /* =========================================================
    EARTH 3D — терминатор фиксирован, Солнце справа-вверху
+   side: DoubleSide — звёзды не видны сквозь Землю.
    ========================================================= */
 
 const EARTH_RADIUS_KM = 6371;
@@ -41,6 +42,7 @@ const earthUniforms = {
 
 const earthMat = new THREE.ShaderMaterial({
   uniforms: earthUniforms,
+  side: THREE.DoubleSide,
   vertexShader: `
     varying vec2 vUv; varying vec3 vNormal; varying vec3 vViewDir; varying vec3 vPosition;
     void main() {
@@ -277,7 +279,7 @@ function updateEarth(km, dt) {
   cloudUniforms.sunDirection.value.copy(SUN_DIR);
   cloudUniforms.time.value = globalTime;
 
-  /* === СОЛНЦЕ ФИКСИРОВАНО — терминатор не крутится === */
+  /* === СОЛНЦЕ ФИКСИРОВАНО === */
   earthUniforms.sunDirection.value.copy(SUN_DIR);
 
   const lightsAmount = Math.min(1, Math.max(0, (km - 500) / 1000));

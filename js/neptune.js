@@ -1,10 +1,5 @@
 /* =========================================================
    NEPTUNE 3D — Нептун с кольцами + Тритон
-   Наклон 28.32° — как у Земли.
-   Радиус: 24 622 км.
-   Появление:   4 350 115 000 км
-   Пик:         4 351 000 000 км
-   Исчезновение: 4 351 885 000 км
    ========================================================= */
 
 const NEPTUNE_RADIUS_KM   = 24622;
@@ -24,12 +19,7 @@ neptuneRenderer.toneMapping = THREE.ACESFilmicToneMapping;
 neptuneRenderer.toneMappingExposure = 0.85;
 
 const neptuneScene = new THREE.Scene();
-const neptuneCamera = new THREE.PerspectiveCamera(
-  45,
-  window.innerWidth / window.innerHeight,
-  0.1,
-  20000
-);
+const neptuneCamera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 20000);
 neptuneCamera.position.set(0, 0, 3.2);
 neptuneCamera.lookAt(0, 0, 0);
 
@@ -46,11 +36,9 @@ const neptuneUniforms = {
 
 const neptuneMat = new THREE.ShaderMaterial({
   uniforms: neptuneUniforms,
+  side: THREE.DoubleSide,
   vertexShader: `
-    varying vec2 vUv;
-    varying vec3 vNormal;
-    varying vec3 vViewDir;
-    varying vec3 vWorldPos;
+    varying vec2 vUv; varying vec3 vNormal; varying vec3 vViewDir; varying vec3 vWorldPos;
     void main() {
       vUv = uv;
       vNormal = normalize(normalMatrix * normal);
@@ -61,46 +49,30 @@ const neptuneMat = new THREE.ShaderMaterial({
     }
   `,
   fragmentShader: `
-    uniform sampler2D map;
-    uniform vec3 sunDirection;
-    uniform vec3 rimColor;
-    uniform vec3 earthshine;
-    uniform float rimStrength;
-    uniform float earthshineStrength;
-    varying vec2 vUv;
-    varying vec3 vNormal;
-    varying vec3 vViewDir;
-    varying vec3 vWorldPos;
-
+    uniform sampler2D map; uniform vec3 sunDirection; uniform vec3 rimColor; uniform vec3 earthshine;
+    uniform float rimStrength; uniform float earthshineStrength;
+    varying vec2 vUv; varying vec3 vNormal; varying vec3 vViewDir; varying vec3 vWorldPos;
     void main() {
       vec3 base = texture2D(map, vUv).rgb;
       if (base.r + base.g + base.b < 0.01) base = vec3(0.2, 0.35, 0.85);
-
       float sunDot = dot(vNormal, sunDirection);
       float lit = smoothstep(-0.35, 0.35, sunDot);
-
       vec3 color = base * (0.10 + 0.85 * lit);
-
       float fres = pow(1.0 - max(dot(vNormal, vViewDir), 0.0), 3.0);
       color += rimColor * fres * rimStrength * lit;
-
       float shadowZone = (1.0 - lit) * smoothstep(-0.3, -0.05, sunDot);
       color += earthshine * shadowZone * earthshineStrength;
-
       gl_FragColor = vec4(color, 1.0);
     }
   `
 });
 
-/* Группа — наклон 28.32° */
 const neptuneGroup = new THREE.Group();
 neptuneScene.add(neptuneGroup);
 
-/* Планета */
 const neptuneMesh = new THREE.Mesh(new THREE.SphereGeometry(1, 96, 96), neptuneMat);
 neptuneGroup.add(neptuneMesh);
 
-/* ---------- КОЛЬЦА НЕПТУНА — тонкие, тёмные ---------- */
 const NEPTUNE_RING_INNER = 1.7;
 const NEPTUNE_RING_OUTER = 2.4;
 
@@ -117,11 +89,7 @@ for (let i = 0; i < nRingPos.count; i++) {
 }
 
 const nRingMat = new THREE.MeshBasicMaterial({
-  color: 0x5a6a8a,
-  transparent: true,
-  side: THREE.DoubleSide,
-  depthWrite: false,
-  opacity: 0.35
+  color: 0x5a6a8a, transparent: true, side: THREE.DoubleSide, depthWrite: false, opacity: 0.35
 });
 
 const nRingMesh = new THREE.Mesh(nRingGeo, nRingMat);
@@ -131,23 +99,14 @@ nRingGroup.add(nRingMesh);
 nRingGroup.rotation.x = Math.PI / 2;
 neptuneGroup.add(nRingGroup);
 
-/* ---------- ТРИТОН — большой спутник ---------- */
-const tritonMat = new THREE.MeshStandardMaterial({
-  color: 0xb8b0a8, roughness: 0.9, metalness: 0.05
-});
-
+const tritonMat = new THREE.MeshStandardMaterial({ color: 0xb8b0a8, roughness: 0.9, metalness: 0.05 });
 const tritonMesh = new THREE.Mesh(new THREE.SphereGeometry(1, 32, 32), tritonMat);
 neptuneScene.add(tritonMesh);
 
-/* Ореол */
 const neptuneHaloMat = new THREE.ShaderMaterial({
-  uniforms: {
-    color: { value: new THREE.Color(0x4060c0) },
-    intensity: { value: 0.3 }
-  },
+  uniforms: { color: { value: new THREE.Color(0x4060c0) }, intensity: { value: 0.3 } },
   vertexShader: `
-    varying vec3 vNormal;
-    varying vec3 vPosition;
+    varying vec3 vNormal; varying vec3 vPosition;
     void main() {
       vNormal = normalize(normalMatrix * normal);
       vPosition = position;
@@ -155,10 +114,8 @@ const neptuneHaloMat = new THREE.ShaderMaterial({
     }
   `,
   fragmentShader: `
-    uniform vec3 color;
-    uniform float intensity;
-    varying vec3 vNormal;
-    varying vec3 vPosition;
+    uniform vec3 color; uniform float intensity;
+    varying vec3 vNormal; varying vec3 vPosition;
     void main() {
       vec3 viewDir = normalize(cameraPosition - vPosition);
       float facing = dot(vNormal, viewDir);
@@ -166,23 +123,17 @@ const neptuneHaloMat = new THREE.ShaderMaterial({
       gl_FragColor = vec4(color, rim * intensity);
     }
   `,
-  transparent: true,
-  blending: THREE.AdditiveBlending,
-  side: THREE.BackSide,
-  depthWrite: false
+  transparent: true, blending: THREE.AdditiveBlending, side: THREE.BackSide, depthWrite: false
 });
 
 const neptuneHalo = new THREE.Mesh(new THREE.SphereGeometry(1.06, 64, 64), neptuneHaloMat);
 neptuneGroup.add(neptuneHalo);
 
-const neptuneAmbient = new THREE.AmbientLight(0x0a1a3a, 0.5);
-neptuneScene.add(neptuneAmbient);
-
+neptuneScene.add(new THREE.AmbientLight(0x0a1a3a, 0.5));
 const neptuneSunLight = new THREE.DirectionalLight(0xfff0e0, 1.0);
 neptuneSunLight.position.set(0.7, 0.4, 0.5);
 neptuneScene.add(neptuneSunLight);
 
-/* Текстура */
 texLoader.load('textures/neptune.jpg', (tex) => {
   tex.anisotropy = neptuneRenderer.capabilities.getMaxAnisotropy();
   tex.encoding = THREE.sRGBEncoding;
@@ -194,8 +145,7 @@ texLoader.load('textures/neptune.jpg', (tex) => {
 }, undefined, () => console.warn('[THREE] neptune.jpg не найден'));
 
 function resizeNeptune() {
-  const w = window.innerWidth;
-  const h = window.innerHeight;
+  const w = window.innerWidth, h = window.innerHeight;
   neptuneRenderer.setSize(w, h, false);
   neptuneCamera.aspect = w / h;
   neptuneCamera.updateProjectionMatrix();
@@ -203,27 +153,17 @@ function resizeNeptune() {
 resizeNeptune();
 window.addEventListener('resize', resizeNeptune);
 
-/* =========================================================
-   ЛОГИКА НЕПТУНА
-   ========================================================= */
 function updateNeptune(km, dt) {
   dt = dt || 0.016;
-
   if (typeof orbitMode !== 'undefined' && orbitMode) return;
-
   if (km < NEPTUNE_APPEAR_KM || km >= NEPTUNE_VANISH_KM) {
     neptuneCanvas.style.opacity = '0';
     return;
   }
-
   const fadeIn  = Math.min(1, (km - NEPTUNE_APPEAR_KM) / ((NEPTUNE_PEAK_KM - NEPTUNE_APPEAR_KM) * 0.5));
   const fadeOut = Math.min(1, (NEPTUNE_VANISH_KM - km) / ((NEPTUNE_VANISH_KM - NEPTUNE_PEAK_KM) * 0.5));
   const visibility = Math.min(fadeIn, fadeOut);
-
-  if (visibility <= 0.01) {
-    neptuneCanvas.style.opacity = '0';
-    return;
-  }
+  if (visibility <= 0.01) { neptuneCanvas.style.opacity = '0'; return; }
 
   let scale;
   if (km <= NEPTUNE_PEAK_KM) {
@@ -239,29 +179,20 @@ function updateNeptune(km, dt) {
   let xPos, yPos;
   if (km <= NEPTUNE_PEAK_KM) {
     const t = (km - NEPTUNE_APPEAR_KM) / (NEPTUNE_PEAK_KM - NEPTUNE_APPEAR_KM);
-    xPos = 0;
-    yPos = 0.5 - t * 0.2;
+    xPos = 0; yPos = 0.5 - t * 0.2;
   } else {
     const k = (km - NEPTUNE_PEAK_KM) / (NEPTUNE_VANISH_KM - NEPTUNE_PEAK_KM);
-    xPos = k * k * 5.5;
-    yPos = 0.3 + k * k * 3.0 + k * 0.3;
+    xPos = k * k * 5.5; yPos = 0.3 + k * k * 3.0 + k * 0.3;
   }
 
   neptuneCanvas.style.opacity = String(visibility);
-
   neptuneGroup.position.set(xPos, yPos, 0);
   neptuneGroup.scale.setScalar(scale);
-
-  /* НАКЛОН 28.32° */
   neptuneGroup.rotation.z = 0.4943;
 
-  /* Вращение планеты (сутки 16ч6м — ×1.49 от Земли) */
   neptuneMesh.rotation.y += 0.0008 * 1.49 * (dt / 0.016);
-
-  /* Кольца — медленное вращение */
   nRingMesh.rotation.z += 0.0006 * (dt / 0.016);
 
-  /* Тритон — большой спутник, кружит вокруг */
   const tritonAngle = globalTime * 0.08;
   tritonMesh.position.set(
     xPos + Math.cos(tritonAngle) * scale * 3.5,
@@ -274,7 +205,7 @@ function updateNeptune(km, dt) {
   neptuneHalo.position.copy(neptuneMesh.position);
   neptuneHalo.scale.setScalar(scale);
 
-  neptuneCamera.position.set(0, scale * 0.4, Math.max(3.2, scale * 2.0));
+  neptuneCamera.position.set(0, scale * 0.4, Math.max(3.2, scale * 2.6));
   neptuneCamera.lookAt(xPos * 0.3, yPos * 0.3, 0);
   neptuneCamera.updateProjectionMatrix();
 

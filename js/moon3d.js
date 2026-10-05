@@ -1,12 +1,10 @@
 /* =========================================================
-   MOON 3D — до пика ФИЗИКА, после пика ХУДОЖЕСТВЕННЫЙ уход
-   к Солнцу (правый верхний угол). Размер после пика растёт —
-   эффект пролёта вплотную.
-   Вращение очень медленное, без покачивания.
+   MOON 3D — Луна, медленное вращение, без покачивания
+   side: DoubleSide — звёзды не видны сквозь Луну.
    ========================================================= */
 
 const MOON_RADIUS_KM = 1737;
-const MOON_MIN_DIST_KM = 4737;   // 3000 км от поверхности + радиус
+const MOON_MIN_DIST_KM = 4737;
 const MOON_K = 3.2;
 
 const moonCanvas = document.getElementById('moon3d');
@@ -40,6 +38,7 @@ const moonUniforms = {
 
 const moonMat = new THREE.ShaderMaterial({
   uniforms: moonUniforms,
+  side: THREE.DoubleSide,
   vertexShader: `
     varying vec2 vUv;
     varying vec3 vNormal;
@@ -162,7 +161,6 @@ function updateMoon(km, dt) {
     return;
   }
 
-  /* --- ПРОГРЕСС 0..1 --- */
   let progress;
   if (km < 384400) {
     progress = (km - appearKm) / (384400 - appearKm) * 0.5;
@@ -170,7 +168,6 @@ function updateMoon(km, dt) {
     progress = 0.5 + (km - 384400) / (vanishKm - 384400) * 0.5;
   }
 
-  /* --- ВИДИМОСТЬ --- */
   const fadeIn  = Math.min(1, (km - appearKm) / 30000);
   const fadeOut = Math.min(1, (vanishKm - km) / 30000);
   const visibility = Math.min(fadeIn, fadeOut);
@@ -180,7 +177,6 @@ function updateMoon(km, dt) {
     return;
   }
 
-  /* --- РАЗМЕР --- */
   let scale;
   if (km <= 384400) {
     const rawDist = Math.abs(km - 384400);
@@ -192,7 +188,6 @@ function updateMoon(km, dt) {
     scale = baseAtPeak + k * 0.5;
   }
 
-  /* --- ТРАЕКТОРИЯ --- */
   let xPos, yPos;
   if (km <= 384400) {
     const t = km / 384400;
@@ -209,15 +204,13 @@ function updateMoon(km, dt) {
   moonMesh.position.set(xPos, yPos, 0);
   moonMesh.scale.setScalar(scale);
 
-  /* --- ВРАЩЕНИЕ: ОЧЕНЬ медленное, без покачивания, лёгкий наклон оси --- */
-  moonMesh.rotation.y += 0.00015 * (dt / 0.016);   // очень медленное вращение
-  moonMesh.rotation.z = 0.02;                      // лёгкий наклон оси
-  // rotation.x НЕ трогаем — нет покачивания
+  /* --- Медленное вращение, без покачивания --- */
+  moonMesh.rotation.y += 0.00015 * (dt / 0.016);
+  moonMesh.rotation.z = 0.02;
 
   moonHalo.position.copy(moonMesh.position);
   moonHalo.scale.setScalar(scale);
 
-  /* Камера смотрит на Луну */
   moonCamera.lookAt(0, 0, 0);
 
   moonRenderer.render(moonScene, moonCamera);
