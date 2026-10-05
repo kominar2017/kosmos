@@ -1,6 +1,6 @@
 /* =========================================================
-   MOON 3D — Луна, медленное вращение, без покачивания
-   side: DoubleSide — звёзды не видны сквозь Луну.
+   MOON 3D — Луна, вращение ускорено (0.00025)
+   side: DoubleSide, без покачивания
    ========================================================= */
 
 const MOON_RADIUS_KM = 1737;
@@ -204,8 +204,8 @@ function updateMoon(km, dt) {
   moonMesh.position.set(xPos, yPos, 0);
   moonMesh.scale.setScalar(scale);
 
-  /* --- Медленное вращение, без покачивания --- */
-  moonMesh.rotation.y += 0.00015 * (dt / 0.016);
+  /* === ВРАЩЕНИЕ (ускорено: 0.00025) === */
+  moonMesh.rotation.y += 0.00025 * (dt / 0.016);
   moonMesh.rotation.z = 0.02;
 
   moonHalo.position.copy(moonMesh.position);
