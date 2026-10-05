@@ -1,5 +1,5 @@
 /* =========================================================
-   JUPITER 3D — Юпитер + 4 галилеевых луны
+   JUPITER 3D — Юпитер + 4 галилеевых луны с текстурами
    Медленнее, разные цвета, лёгкое свечение.
    ========================================================= */
 
@@ -91,34 +91,58 @@ const jupiterMat = new THREE.ShaderMaterial({
 const jupiterMesh = new THREE.Mesh(new THREE.SphereGeometry(1, 96, 96), jupiterMat);
 jupiterScene.add(jupiterMesh);
 
-/* ---------- ГАЛИЛЕЕВЫ ЛУНЫ ---------- */
-/* Разные цвета, медленное движение */
+/* ---------- ГАЛИЛЕЕВЫ ЛУНЫ с текстурами ---------- */
 const GALILEAN_MOONS = [
-  { name: 'Ио',      size: 0.08, orbit: 1.6, speed: 0.25, color: 0xffcc44, angle: 0.0 },
-  { name: 'Европа',  size: 0.07, orbit: 2.1, speed: 0.18, color: 0xe8f0ff, angle: 1.5 },
-  { name: 'Ганимед', size: 0.12, orbit: 2.7, speed: 0.12, color: 0x9a8878, angle: 3.0 },
-  { name: 'Каллисто', size: 0.10, orbit: 3.4, speed: 0.08, color: 0x5a4a3a, angle: 4.5 }
+  { name: 'Ио',      size: 0.08, orbit: 1.6, speed: 0.25, color: 0xffcc44, texture: 'io.jpg',       angle: 0.0 },
+  { name: 'Европа',  size: 0.07, orbit: 2.1, speed: 0.18, color: 0xe8f0ff, texture: 'europa.jpg',   angle: 1.5 },
+  { name: 'Ганимед', size: 0.12, orbit: 2.7, speed: 0.12, color: 0x9a8878, texture: 'ganymede.jpg', angle: 3.0 },
+  { name: 'Каллисто',size: 0.10, orbit: 3.4, speed: 0.08, color: 0x5a4a3a, texture: 'callisto.jpg', angle: 4.5 }
 ];
 
 const galileanMeshes = [];
 
 GALILEAN_MOONS.forEach((m) => {
-  const geo = new THREE.SphereGeometry(1, 24, 24);
+  const geo = new THREE.SphereGeometry(1, 32, 32);
+
+  /* Материал с текстурой (map загрузится асинхронно) */
   const mat = new THREE.MeshStandardMaterial({
-    color: m.color,
-    roughness: 0.85,
-    metalness: 0.05,
-    flatShading: false,
-    emissive: m.color,
-    emissiveIntensity: 0.15
+    color: m.color,             // fallback — если текстура не загрузится
+    roughness: 0.9,
+    metalness: 0.02,
+    emissive: 0x000000,
+    emissiveIntensity: 0,
+    map: null
   });
+
   const mesh = new THREE.Mesh(geo, mat);
   mesh.scale.setScalar(m.size);
   jupiterScene.add(mesh);
+
+  /* Загрузка текстуры */
+  texLoader.load(
+    'textures/' + m.texture,
+    (tex) => {
+      tex.anisotropy = jupiterRenderer.capabilities.getMaxAnisotropy();
+      tex.encoding = THREE.sRGBEncoding;
+      tex.minFilter = THREE.LinearMipmapLinearFilter;
+      tex.magFilter = THREE.LinearFilter;
+      tex.generateMipmaps = true;
+      mat.map = tex;
+      mat.color.set(0xffffff);       // белый цвет, чтобы текстура была яркой
+      mat.needsUpdate = true;
+      console.log('[THREE] Луна Юпитера загружена:', m.name);
+    },
+    undefined,
+    () => {
+      console.warn('[THREE] Текстура не найдена:', m.texture, '— используется цвет');
+      // fallback: цвет уже установлен, ничего делать не надо
+    }
+  );
+
   galileanMeshes.push({ mesh, moon: m, angle: m.angle });
 });
 
-/* Ореол */
+/* Ореол Юпитера */
 const jupiterHaloMat = new THREE.ShaderMaterial({
   uniforms: {
     color: { value: new THREE.Color(0xffd0a0) },
@@ -161,7 +185,7 @@ const jupiterSunLight = new THREE.DirectionalLight(0xfff0e0, 1.2);
 jupiterSunLight.position.set(0.7, 0.4, 0.5);
 jupiterScene.add(jupiterSunLight);
 
-/* Текстура */
+/* Текстура Юпитера */
 texLoader.load('textures/jupiter.jpg', (tex) => {
   tex.anisotropy = jupiterRenderer.capabilities.getMaxAnisotropy();
   tex.encoding = THREE.sRGBEncoding;
@@ -233,7 +257,7 @@ function updateJupiter(km, dt) {
   jupiterMesh.rotation.y += 0.0008 * 2.4 * (dt / 0.016);
   jupiterMesh.rotation.z = 0.0546;
 
-  /* Галилеевы луны */
+  /* Галилеевы луны с текстурами */
   galileanMeshes.forEach((g) => {
     g.angle += g.moon.speed * dt;
     const orbitR = g.moon.orbit * scale;
