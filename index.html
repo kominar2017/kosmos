@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="ru" data-lang="ru" translate="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="google" content="notranslate">
+<meta name="yandex" content="notranslate">
+<title>Полёт</title>
+<link rel="stylesheet" href="css/style.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500&display=swap" rel="stylesheet">
+</head>
+<body data-i18n-title="title" translate="no">
+
+<canvas id="space"></canvas>
+<canvas id="asteroids3d"></canvas>
+<canvas id="kuiper3d"></canvas>
+<canvas id="earth3d"></canvas>
+<canvas id="moon3d"></canvas>
+<canvas id="mars3d"></canvas>
+<canvas id="jupiter3d"></canvas>
+<canvas id="saturn3d"></canvas>
+<canvas id="uranus3d"></canvas>
+<canvas id="neptune3d"></canvas>
+<canvas id="pluto3d"></canvas>
+<canvas id="iss3d"></canvas>
+<canvas id="voyager3d"></canvas>          <!-- ← НОВОЕ -->
+<canvas id="ui-canvas"></canvas>
+
+<div class="ui">
+  <div id="counter">
+    <div id="distance">0</div>
+    <div id="unit" data-i18n="unit">КМ ОТ ЗЕМЛИ</div>
+  </div>
+  <div id="milestone"></div>
+  <div id="hint" data-i18n="hint">КЛИКНИ</div>
+  <button id="donate" data-i18n="donate">ПОДДЕРЖАТЬ</button>
+  <button id="reviewBtn" data-i18n="reviewBtn">🎬 СМОТРЕТЬ ПОЛЁТ</button>
+  <button id="orbitBtn" data-i18n="orbitBtn">🛰 ОБЗОР</button>
+
+  <div id="langSwitch">
+    <button class="lang-btn" data-lang="ru">RU</button>
+    <button class="lang-btn" data-lang="en">EN</button>
+    <button class="lang-btn" data-lang="es">ES</button>
+    <button class="lang-btn" data-lang="fr">FR</button>
+    <button class="lang-btn" data-lang="pt">PT</button>
+    <button class="lang-btn" data-lang="zh">中文</button>
+  </div>
+</div>
+
+<div id="reviewPanel">
+  <div id="reviewKmLabel">1 км</div>
+  <div class="review-controls">
+    <button id="reviewPlay">▶</button>
+    <input type="range" id="reviewSlider" min="0" max="1000" value="0" step="1">
+    <button id="reviewClose">✕</button>
+  </div>
+</div>
+
+<div id="jumpBox">
+  <input type="text" id="jumpInput" data-i18n-placeholder="jumpPlaceholder" placeholder="введи км" />
+  <button id="jumpBtn">→</button>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+
+<script src="js/i18n.js"></script>
+<script src="js/core.js"></script>
+<script src="js/sky2d.js"></script>
+<script src="js/planets2d.js"></script>
+<script src="js/earth3d.js"></script>
+<script src="js/moon3d.js"></script>
+<script src="js/mars.js"></script>
+<script src="js/jupiter.js"></script>
+<script src="js/saturn.js"></script>
+<script src="js/uranus.js"></script>
+<script src="js/neptune.js"></script>
+<script src="js/pluto.js"></script>
+<script src="js/iss3d.js"></script>
+<script src="js/voyager3d.js"></script>          <!-- ← НОВОЕ -->
+<script src="js/asteroids3d.js"></script>
+<script src="js/kuiper3d.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/review.js"></script>
+<script src="js/jump.js"></script>
+<script src="js/orbit.js"></script>
+<script src="js/main.js"></script>
+
+</body>
+</html>

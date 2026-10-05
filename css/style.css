@@ -1,0 +1,472 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body {
+  width: 100%; height: 100%; overflow: hidden;
+  background: #000;
+  font-family: 'Space Mono', 'JetBrains Mono', monospace;
+  color: #fff; cursor: crosshair; user-select: none;
+  -webkit-font-smoothing: antialiased;
+}
+html[data-lang="zh"] body,
+html[data-lang="zh"] button,
+html[data-lang="zh"] input {
+  font-family: 'Noto Sans SC', 'Space Mono', monospace;
+}
+
+#space       { position: fixed; inset: 0; z-index: 1; }
+#asteroids3d { position: fixed; left: 0; top: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none; }
+#kuiper3d    { position: fixed; left: 0; top: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none; }
+#earth3d     { position: fixed; left: 0; top: 0; width: 100vw; height: 100vh; z-index: 2; pointer-events: none; }
+#moon3d      { position: fixed; left: 0; top: 0; width: 100vw; height: 100vh; z-index: 2; pointer-events: none; }
+#mars3d      { position: fixed; left: 0; top: 0; width: 100vw; height: 100vh; z-index: 2; pointer-events: none; }
+#jupiter3d   { position: fixed; left: 0; top: 0; width: 100vw; height: 100vh; z-index: 2; pointer-events: none; }
+#saturn3d    { position: fixed; left: 0; top: 0; width: 100vw; height: 100vh; z-index: 2; pointer-events: none; }
+#uranus3d    { position: fixed; left: 0; top: 0; width: 100vw; height: 100vh; z-index: 2; pointer-events: none; }
+#neptune3d   { position: fixed; left: 0; top: 0; width: 100vw; height: 100vh; z-index: 2; pointer-events: none; }
+#pluto3d     { position: fixed; left: 0; top: 0; width: 100vw; height: 100vh; z-index: 2; pointer-events: none; }
+#iss3d       { position: fixed; left: 0; top: 0; width: 100vw; height: 100vh; z-index: 2; pointer-events: none; }
+#voyager3d   { position: fixed; left: 0; top: 0; width: 100vw; height: 100vh; z-index: 2; pointer-events: none; }
+#ui-canvas   { position: fixed; left: 0; top: 0; width: 100vw; height: 100vh; z-index: 4; pointer-events: none; }
+.ui { position: fixed; inset: 0; z-index: 5; pointer-events: none; }
+
+/* =========================================================
+   СЧЁТЧИК
+   ========================================================= */
+#counter {
+  position: absolute; bottom: 130px; left: 50%;
+  transform: translateX(-50%); text-align: center;
+  --boost: 0;
+}
+#distance {
+  font-size: 52px; font-weight: 400; letter-spacing: 3px;
+  font-variant-numeric: tabular-nums;
+  color: rgb(
+    calc(232 + (142 - 232) * var(--boost)),
+    calc(244 + (212 - 244) * var(--boost)),
+    255
+  );
+  text-shadow:
+    0 0 calc(30px + 20px * var(--boost)) rgba(140, 200, 255, calc(0.5 + 0.5 * var(--boost))),
+    0 0 calc(60px * var(--boost)) rgba(80, 160, 255, calc(0.9 * var(--boost))),
+    0 0 calc(120px * var(--boost)) rgba(60, 140, 255, calc(0.6 * var(--boost)));
+  transition: color 0.12s linear, text-shadow 0.12s linear;
+}
+#unit {
+  font-size: 10px; margin-top: 10px;
+  letter-spacing: 6px;
+  color: rgb(
+    calc(168 + (100 - 168) * var(--boost)),
+    calc(196 + (190 - 196) * var(--boost)),
+    calc(224 + (255 - 224) * var(--boost))
+  );
+  opacity: calc(0.35 + 0.5 * var(--boost));
+  text-shadow:
+    0 0 calc(15px * var(--boost)) rgba(120, 200, 255, calc(0.9 * var(--boost)));
+  transition: color 0.12s linear, opacity 0.12s linear, text-shadow 0.12s linear;
+}
+html[data-lang="zh"] #unit { letter-spacing: 2px; }
+
+#hint {
+  position: absolute; top: 42%; left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 10px; letter-spacing: 6px;
+  color: #a8c4e0; font-weight: 300;
+  pointer-events: none;
+  animation: pulse 3s infinite ease-in-out;
+  transition: opacity 0.6s ease;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 0.15; }
+  50%      { opacity: 0.35; }
+}
+
+#milestone {
+  position: absolute; bottom: 100px; left: 50%;
+  transform: translateX(-50%);
+  font-size: 11px; letter-spacing: 1px;
+  color: rgba(180, 210, 255, 0.7);
+  text-align: center; opacity: 0;
+  transition: opacity 1.5s ease;
+  pointer-events: none; max-width: 620px; font-weight: 300;
+}
+#milestone.show { opacity: 1; }
+
+#donate {
+  position: absolute; bottom: 24px; right: 24px;
+  padding: 8px 14px;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  color: rgba(255, 255, 255, 0.25);
+  font-family: inherit; font-size: 10px;
+  letter-spacing: 2px; cursor: pointer;
+  pointer-events: auto;
+  transition: all 0.4s ease; opacity: 0.4;
+}
+#donate:hover {
+  color: #ffb8c8;
+  border-color: rgba(255, 150, 180, 0.4);
+  opacity: 1;
+  box-shadow: 0 0 20px rgba(255, 150, 180, 0.15);
+}
+
+#reviewBtn {
+  position: absolute; bottom: 24px; left: 24px;
+  padding: 8px 14px;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  color: rgba(255, 255, 255, 0.35);
+  font-family: inherit; font-size: 10px;
+  letter-spacing: 2px; cursor: pointer;
+  pointer-events: auto;
+  transition: all 0.4s ease; opacity: 0.5;
+}
+#reviewBtn:hover {
+  color: #a8d8ff;
+  border-color: rgba(140, 200, 255, 0.5);
+  opacity: 1;
+  box-shadow: 0 0 20px rgba(140, 200, 255, 0.15);
+}
+
+#orbitBtn {
+  position: absolute; bottom: 24px; left: 200px;
+  padding: 8px 14px;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  color: rgba(255, 255, 255, 0.35);
+  font-family: inherit; font-size: 10px;
+  letter-spacing: 2px; cursor: pointer;
+  pointer-events: auto;
+  transition: all 0.4s ease; opacity: 0.5;
+}
+#orbitBtn:hover {
+  color: #a8d8ff;
+  border-color: rgba(140, 200, 255, 0.5);
+  opacity: 1;
+  box-shadow: 0 0 20px rgba(140, 200, 255, 0.15);
+}
+
+/* =========================================================
+   ORBIT UI
+   ========================================================= */
+#orbitUI {
+  position: fixed; inset: 0;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24px;
+  z-index: 10;
+  pointer-events: none;
+}
+#orbitUI.orbit-active { display: flex; }
+
+.orbit-top {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  pointer-events: auto;
+  padding-top: 8px;
+}
+
+.orbit-dropdown { position: relative; }
+
+.orbit-dropdown-toggle {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 20px;
+  background: rgba(6, 12, 28, 0.85);
+  border: 1px solid rgba(120, 180, 255, 0.35);
+  border-radius: 4px;
+  color: #c8e4ff;
+  font-family: inherit;
+  font-size: 12px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  min-width: 240px;
+  justify-content: space-between;
+}
+.orbit-dropdown-toggle:hover {
+  border-color: rgba(160, 220, 255, 0.7);
+  box-shadow: 0 0 24px rgba(120, 180, 255, 0.2);
+  color: #fff;
+}
+.orbit-dropdown-label { flex: 1; text-align: left; }
+.orbit-dropdown-arrow { font-size: 10px; opacity: 0.6; transition: transform 0.3s ease; }
+.orbit-dropdown.open .orbit-dropdown-arrow { transform: rotate(180deg); }
+
+.orbit-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0; right: 0;
+  background: rgba(6, 12, 28, 0.95);
+  border: 1px solid rgba(120, 180, 255, 0.35);
+  border-radius: 4px;
+  padding: 6px;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6), 0 0 30px rgba(120, 180, 255, 0.1);
+  opacity: 0;
+  transform: translateY(-8px);
+  pointer-events: none;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+.orbit-dropdown.open .orbit-dropdown-menu {
+  opacity: 1; transform: translateY(0); pointer-events: auto;
+}
+
+.orbit-dropdown-item {
+  display: block;
+  width: 100%;
+  padding: 10px 14px;
+  background: transparent;
+  border: none;
+  border-radius: 2px;
+  color: rgba(200, 228, 255, 0.75);
+  font-family: inherit;
+  font-size: 12px;
+  letter-spacing: 2px;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.orbit-dropdown-item:hover {
+  background: rgba(120, 180, 255, 0.12);
+  color: #fff;
+}
+.orbit-dropdown-item.active {
+  background: rgba(120, 180, 255, 0.18);
+  color: #a8d8ff;
+  box-shadow: inset 0 0 0 1px rgba(160, 220, 255, 0.4);
+}
+.orbit-dropdown-item.loading {
+  opacity: 0.5;
+  cursor: wait;
+  color: rgba(160, 200, 255, 0.5);
+}
+.orbit-dropdown-item.loading::after { content: ' ⏳'; font-size: 10px; }
+.orbit-dropdown-item.disabled { opacity: 0.3; cursor: not-allowed; }
+
+.orbit-bottom {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  pointer-events: none;
+}
+.orbit-hint {
+  font-size: 10px;
+  letter-spacing: 3px;
+  color: rgba(180, 210, 255, 0.4);
+  pointer-events: none;
+  text-align: center;
+}
+.orbit-close {
+  padding: 12px 24px;
+  background: rgba(6, 12, 28, 0.85);
+  border: 1px solid rgba(120, 180, 255, 0.4);
+  border-radius: 4px;
+  color: #a8d8ff;
+  font-family: inherit;
+  font-size: 11px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  cursor: pointer;
+  pointer-events: auto;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  margin-bottom: 20px;
+}
+.orbit-close:hover {
+  background: rgba(120, 180, 255, 0.12);
+  color: #fff;
+  border-color: rgba(160, 220, 255, 0.9);
+  box-shadow: 0 0 24px rgba(120, 180, 255, 0.3);
+}
+
+/* =========================================================
+   REVIEW PANEL
+   ========================================================= */
+#reviewPanel {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  padding: 28px 40px 32px;
+  background: transparent;
+  display: flex; flex-direction: column; gap: 14px;
+  transform: translateY(120%);
+  transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: auto;
+  z-index: 100;
+}
+#reviewPanel.show { transform: translateY(0); }
+
+#reviewKmLabel {
+  text-align: center;
+  font-size: 11px; letter-spacing: 3px;
+  color: rgba(180, 210, 255, 0.6);
+  font-variant-numeric: tabular-nums;
+}
+.review-controls { display: flex; align-items: center; gap: 20px; }
+
+#reviewPlay, #reviewClose {
+  width: 42px; height: 42px;
+  border-radius: 50%;
+  border: 1px solid rgba(140, 200, 255, 0.35);
+  background: rgba(0, 0, 0, 0.5);
+  color: #a8d8ff;
+  font-family: inherit;
+  font-size: 14px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.3s ease;
+  display: flex; align-items: center; justify-content: center;
+}
+#reviewPlay:hover, #reviewClose:hover {
+  background: rgba(140, 200, 255, 0.15);
+  color: #fff;
+  border-color: rgba(160, 220, 255, 0.7);
+  box-shadow: 0 0 20px rgba(140, 200, 255, 0.3);
+}
+
+#reviewSlider {
+  flex: 1;
+  height: 4px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: rgba(140, 180, 240, 0.15);
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+}
+#reviewSlider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  background: #a8d8ff;
+  box-shadow: 0 0 14px rgba(140, 200, 255, 0.9), 0 0 4px rgba(160, 220, 255, 1);
+  cursor: pointer;
+}
+#reviewSlider::-moz-range-thumb {
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  background: #a8d8ff;
+  border: none;
+  box-shadow: 0 0 14px rgba(140, 200, 255, 0.9);
+  cursor: pointer;
+}
+
+/* =========================================================
+   JUMP BOX
+   ========================================================= */
+#jumpBox {
+  position: fixed; top: 20px; right: 20px;
+  display: flex; gap: 8px; z-index: 9999;
+}
+#jumpInput {
+  width: 170px; padding: 10px 14px;
+  background: rgba(0, 0, 0, 0.75);
+  border: 1px solid rgba(140, 200, 255, 0.5);
+  border-radius: 6px; color: #fff;
+  font-family: inherit; font-size: 12px;
+  outline: none; letter-spacing: 1px;
+}
+#jumpInput::placeholder { color: rgba(255, 255, 255, 0.35); }
+#jumpInput:focus {
+  border-color: rgba(160, 220, 255, 0.95);
+  background: rgba(0, 0, 0, 0.9);
+  box-shadow: 0 0 20px rgba(140, 200, 255, 0.3);
+}
+#jumpBtn {
+  padding: 10px 18px;
+  background: rgba(0, 0, 0, 0.75);
+  border: 1px solid rgba(140, 200, 255, 0.5);
+  border-radius: 6px;
+  color: #a8d8ff;
+  font-family: inherit; font-size: 14px;
+  cursor: pointer; transition: all 0.3s ease;
+}
+#jumpBtn:hover {
+  background: rgba(140, 200, 255, 0.15);
+  color: #fff;
+  border-color: rgba(160, 220, 255, 0.9);
+}
+
+/* =========================================================
+   ПЕРЕКЛЮЧАТЕЛЬ ЯЗЫКА
+   ========================================================= */
+#langSwitch {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  display: flex;
+  gap: 5px;
+  pointer-events: auto;
+  z-index: 9999;
+}
+.lang-btn {
+  padding: 6px 10px;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(140, 200, 255, 0.2);
+  border-radius: 4px;
+  color: rgba(255, 255, 255, 0.4);
+  font-family: inherit;
+  font-size: 10px;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  min-width: 32px;
+  text-align: center;
+}
+.lang-btn:hover {
+  color: #a8d8ff;
+  border-color: rgba(140, 200, 255, 0.5);
+}
+.lang-btn.active {
+  color: #a8d8ff;
+  border-color: rgba(160, 220, 255, 0.9);
+  background: rgba(140, 200, 255, 0.1);
+  box-shadow: 0 0 12px rgba(140, 200, 255, 0.2);
+}
+
+/* =========================================================
+   ЗАЩИТА ОТ АВТОПЕРЕВОДА
+   ========================================================= */
+[translate="no"] { /* marker */ }
+
+ya-tr-span, .ya-tr-span {
+  all: inherit;
+  display: inline !important;
+  visibility: visible !important;
+}
+
+[data-i18n] ya-tr-span,
+[data-i18n] .ya-tr-span,
+[data-i18n-placeholder] ya-tr-span,
+[data-i18n-placeholder] .ya-tr-span,
+.notranslate ya-tr-span,
+.notranslate .ya-tr-span {
+  display: inline !important;
+  visibility: visible !important;
+  font-family: inherit !important;
+  font-size: inherit !important;
+  color: inherit !important;
+  letter-spacing: inherit !important;
+  opacity: inherit !important;
+}
+
+[data-i18n] > font,
+.notranslate > font {
+  font-family: inherit !important;
+  font-size: inherit !important;
+  color: inherit !important;
+  letter-spacing: inherit !important;
+}

@@ -1,0 +1,1599 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Полёт</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    width: 100%; height: 100%; overflow: hidden;
+    background: #000;
+    font-family: 'Space Mono', 'JetBrains Mono', monospace;
+    color: #fff; cursor: crosshair; user-select: none;
+    -webkit-font-smoothing: antialiased;
+  }
+  #space { position: fixed; inset: 0; z-index: 1; }
+  .ui { position: fixed; inset: 0; z-index: 2; pointer-events: none; }
+
+  #counter {
+    position: absolute; bottom: 130px; left: 50%;
+    transform: translateX(-50%); text-align: center;
+  }
+  #distance {
+    font-size: 52px; font-weight: 400; letter-spacing: 3px;
+    color: #e8f4ff;
+    text-shadow: 0 0 30px rgba(140, 200, 255, 0.5);
+    transition: color 0.4s ease, text-shadow 0.4s ease;
+    font-variant-numeric: tabular-nums;
+  }
+  #unit {
+    font-size: 10px; opacity: 0.35; margin-top: 10px;
+    letter-spacing: 6px; color: #a8c4e0;
+    transition: color 0.4s ease, opacity 0.4s ease;
+  }
+  #counter.boost #distance {
+    color: #a8dcff;
+    text-shadow: 0 0 40px rgba(120, 200, 255, 0.9),
+                 0 0 80px rgba(80, 160, 255, 0.5);
+  }
+  #counter.boost #unit { color: #7cc4ff; opacity: 0.6; }
+  #milestone {
+    position: absolute; bottom: 100px; left: 50%;
+    transform: translateX(-50%);
+    font-size: 11px; letter-spacing: 1px;
+    color: rgba(180, 210, 255, 0.7);
+    text-align: center; opacity: 0;
+    transition: opacity 1.5s ease;
+    pointer-events: none; max-width: 620px; font-weight: 300;
+  }
+  #milestone.show { opacity: 1; }
+  #hint {
+    position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 12px; letter-spacing: 8px;
+    color: rgba(255, 255, 255, 0.2);
+    font-weight: 300;
+    animation: pulse 3s infinite ease-in-out;
+    transition: opacity 1s ease;
+    pointer-events: none;
+  }
+  @keyframes pulse { 0%, 100% { opacity: 0.12; } 50% { opacity: 0.4; } }
+
+  #donate {
+    position: absolute; bottom: 24px; right: 24px;
+    padding: 8px 14px;
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 20px;
+    color: rgba(255, 255, 255, 0.25);
+    font-family: inherit; font-size: 10px;
+    letter-spacing: 2px; cursor: pointer;
+    pointer-events: auto;
+    transition: all 0.4s ease; opacity: 0.4;
+  }
+  #donate:hover {
+    color: #ffb8c8;
+    border-color: rgba(255, 150, 180, 0.4);
+    opacity: 1;
+    box-shadow: 0 0 20px rgba(255, 150, 180, 0.15);
+  }
+
+  /* Кнопка просмотра */
+  #reviewBtn {
+    position: absolute; bottom: 24px; left: 24px;
+    padding: 8px 14px;
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 20px;
+    color: rgba(255, 255, 255, 0.35);
+    font-family: inherit; font-size: 10px;
+    letter-spacing: 2px; cursor: pointer;
+    pointer-events: auto;
+    transition: all 0.4s ease; opacity: 0.5;
+  }
+  #reviewBtn:hover {
+    color: #a8d8ff;
+    border-color: rgba(140, 200, 255, 0.5);
+    opacity: 1;
+    box-shadow: 0 0 20px rgba(140, 200, 255, 0.15);
+  }
+
+  /* Панель просмотра — внизу */
+  #reviewPanel {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    padding: 28px 40px 32px;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.9), rgba(0, 0, 0, 0.6) 60%, transparent);
+    display: flex; flex-direction: column; gap: 14px;
+    transform: translateY(120%);
+    transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    pointer-events: auto;
+    z-index: 100;
+  }
+  #reviewPanel.show { transform: translateY(0); }
+
+  #reviewKmLabel {
+    text-align: center;
+    font-size: 11px;
+    letter-spacing: 3px;
+    color: rgba(180, 210, 255, 0.6);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .review-controls {
+    display: flex; align-items: center; gap: 20px;
+  }
+
+  #reviewPlay, #reviewClose {
+    width: 42px; height: 42px;
+    border-radius: 50%;
+    border: 1px solid rgba(140, 200, 255, 0.35);
+    background: rgba(0, 0, 0, 0.5);
+    color: #a8d8ff;
+    font-family: inherit;
+    font-size: 14px;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: all 0.3s ease;
+    display: flex; align-items: center; justify-content: center;
+  }
+  #reviewPlay:hover, #reviewClose:hover {
+    background: rgba(140, 200, 255, 0.15);
+    color: #fff;
+    border-color: rgba(160, 220, 255, 0.7);
+    box-shadow: 0 0 20px rgba(140, 200, 255, 0.3);
+  }
+
+  #reviewSlider {
+    flex: 1;
+    height: 4px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: rgba(140, 180, 240, 0.15);
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+    transition: background 0.3s;
+  }
+  #reviewSlider:hover { background: rgba(140, 180, 240, 0.25); }
+  #reviewSlider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    background: #a8d8ff;
+    box-shadow: 0 0 14px rgba(140, 200, 255, 0.9), 0 0 4px rgba(160, 220, 255, 1);
+    cursor: pointer;
+    transition: transform 0.2s;
+  }
+  #reviewSlider::-webkit-slider-thumb:hover { transform: scale(1.15); }
+  #reviewSlider::-moz-range-thumb {
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    background: #a8d8ff;
+    border: none;
+    box-shadow: 0 0 14px rgba(140, 200, 255, 0.9);
+    cursor: pointer;
+  }
+
+  #jumpBox {
+    position: fixed; top: 20px; right: 20px;
+    display: flex; gap: 8px; z-index: 9999;
+  }
+  #jumpInput {
+    width: 170px; padding: 10px 14px;
+    background: rgba(0, 0, 0, 0.75);
+    border: 1px solid rgba(140, 200, 255, 0.5);
+    border-radius: 6px; color: #fff;
+    font-family: inherit; font-size: 12px;
+    outline: none; letter-spacing: 1px;
+  }
+  #jumpInput::placeholder { color: rgba(255, 255, 255, 0.35); }
+  #jumpInput:focus {
+    border-color: rgba(160, 220, 255, 0.95);
+    background: rgba(0, 0, 0, 0.9);
+    box-shadow: 0 0 20px rgba(140, 200, 255, 0.3);
+  }
+  #jumpBtn {
+    padding: 10px 18px;
+    background: rgba(0, 0, 0, 0.75);
+    border: 1px solid rgba(140, 200, 255, 0.5);
+    border-radius: 6px;
+    color: #a8d8ff;
+    font-family: inherit; font-size: 14px;
+    cursor: pointer; transition: all 0.3s ease;
+  }
+  #jumpBtn:hover {
+    background: rgba(140, 200, 255, 0.15);
+    color: #fff;
+    border-color: rgba(160, 220, 255, 0.9);
+  }
+</style>
+</head>
+<body>
+
+<canvas id="space"></canvas>
+
+<div class="ui">
+  <div id="counter">
+    <div id="distance">0</div>
+    <div id="unit">КМ ОТ ЗЕМЛИ</div>
+  </div>
+  <div id="milestone"></div>
+  <div id="hint">КЛИКНИ</div>
+  <button id="donate">ПОДДЕРЖАТЬ</button>
+  <button id="reviewBtn">🎬 СМОТРЕТЬ ПОЛЁТ</button>
+</div>
+
+<div id="reviewPanel">
+  <div id="reviewKmLabel">1 км</div>
+  <div class="review-controls">
+    <button id="reviewPlay">▶</button>
+    <input type="range" id="reviewSlider" min="0" max="1000" value="0" step="1">
+    <button id="reviewClose">✕</button>
+  </div>
+</div>
+
+<div id="jumpBox">
+  <input type="text" id="jumpInput" placeholder="введи км" />
+  <button id="jumpBtn">→</button>
+</div>
+
+<script>
+/* =========================================================
+   СОСТОЯНИЕ
+   ========================================================= */
+let distance = 0n;
+let nextMilestone = 0;
+let impulse = 0;
+let starsSpeed = 0;
+let targetSpeed = 0;
+let boostActive = false;
+let lastFrameTime = performance.now();
+let globalTime = 0;
+
+// Просмотр
+let reviewMode = false;
+let reviewPlaying = false;
+let reviewSliderPos = 0;      // 0..1000
+let reviewMaxKm = 0;          // максимум для слайдера
+let viewKm = 1;               // текущее km в просмотре
+
+// Скорость автопрокрутки: 1000 единиц за ~200 секунд = расслабленный темп
+const PLAY_SPEED = 5;          // единиц слайдера в секунду
+
+const IMPULSE_MAX = 20;
+const IMPULSE_HALFLIFE = 1.2;
+const IMPULSE_PER_CLICK = 4;
+const BOOST_THRESHOLD = 12;
+const BASE_SPEED = 0.4;
+const MAX_SPEED = 12;
+
+const MILESTONES = [
+  { d: 10n, text: '10 км. Вы оторвались от земли.' },
+  { d: 100n, text: '100 км. Линия Кармана. Здесь начинается космос.' },
+  { d: 400n, text: '400 км. МКС.' },
+  { d: 384400n, text: '384 400 км. ЛУНА.' },
+  { d: 1500000n, text: '1.5 млн км. Точки Лагранжа L1 и L2.' },
+  { d: 41000000n, text: '41 млн км. ВЕНЕРА.' },
+  { d: 77000000n, text: '77 млн км. МЕРКУРИЙ.' },
+  { d: 225000000n, text: '225 млн км. МАРС.' },
+  { d: 628000000n, text: '628 млн км. ЮПИТЕР.' },
+  { d: 1275000000n, text: '1.27 млрд км. САТУРН.' },
+  { d: 2723000000n, text: '2.7 млрд км. УРАН.' },
+  { d: 4351000000n, text: '4.35 млрд км. НЕПТУН.' },
+  { d: 5906000000n, text: '5.9 млрд км. ПЛУТОН.' },
+  { d: 24000000000n, text: '24 млрд км. ВОЯДЖЕР-1.' },
+  { d: 40000000000000n, text: '4.24 световых года. АЛЬФА ЦЕНТАВРА.' },
+  { d: 81000000000000n, text: '8.6 световых лет. СИРИУС.' },
+  { d: 6400000000000000n, text: '640 световых лет. БЕТЕЛЬГЕЙЗЕ.' },
+  { d: 950000000000000000n, text: '100 000 световых лет. КРАЙ МЛЕЧНОГО ПУТИ.' },
+  { d: 440000000000000000000000n, text: '46.5 млрд световых лет. ГОРИЗОНТ ВСЕЛЕННОЙ.' }
+];
+
+const BODIES = [
+  { distance: 400n,         type: 'station',    size: 0.10, pathSide: 1,  pathOffset: 0.28 },
+  { distance: 540n,         type: 'hubble',     size: 0.09, pathSide: -1, pathOffset: 0.32 },
+  { distance: 550n,         type: 'starlink',   size: 0.07, pathSide: 1,  pathOffset: 0.38 },
+  { distance: 35786n,       type: 'satellite',  size: 0.07, pathSide: -1, pathOffset: 0.4 },
+  { distance: 1500000n,     type: 'point',      size: 0.08, pathSide: 1,  pathOffset: 0.4 },
+  { distance: 1500000n,     type: 'point',      size: 0.08, pathSide: -1, pathOffset: 0.4 },
+  { distance: 384400n,      type: 'moon',       size: 0.55, pathSide: -1, pathOffset: 0.25, rotationSpeed: 0.15 },
+  { distance: 41000000n,    type: 'venus',      size: 0.5,  pathSide: 1,  pathOffset: 0.55, rotationSpeed: 0.2 },
+  { distance: 77000000n,    type: 'mercury',    size: 0.35, pathSide: -1, pathOffset: 0.65, rotationSpeed: 0.3 },
+  { distance: 225000000n,   type: 'mars',       size: 0.65, pathSide: -1, pathOffset: 0.2, rotationSpeed: 0.25 },
+  { distance: 628000000n,   type: 'jupiter',    size: 0.85, pathSide: 1,  pathOffset: 0.25, rotationSpeed: 0.4 },
+  { distance: 628000000n,   type: 'galilean',   size: 0.08, pathSide: 1,  pathOffset: 0.5 },
+  { distance: 628000000n,   type: 'galilean',   size: 0.09, pathSide: 1,  pathOffset: 0.55 },
+  { distance: 628000000n,   type: 'galilean',   size: 0.1,  pathSide: 1,  pathOffset: 0.6 },
+  { distance: 628000000n,   type: 'galilean',   size: 0.09, pathSide: 1,  pathOffset: 0.65 },
+  { distance: 1275000000n,  type: 'saturn',     size: 0.8,  pathSide: -1, pathOffset: 0.25, rotationSpeed: 0.35 },
+  { distance: 1275000000n,  type: 'titan',      size: 0.1,  pathSide: -1, pathOffset: 0.5 },
+  { distance: 2723000000n,  type: 'uranus',     size: 0.55, pathSide: 1,  pathOffset: 0.3, rotationSpeed: 0.3 },
+  { distance: 4351000000n,  type: 'neptune',    size: 0.55, pathSide: -1, pathOffset: 0.3, rotationSpeed: 0.3 },
+  { distance: 5906000000n,  type: 'pluto',      size: 0.28, pathSide: 1,  pathOffset: 0.4, rotationSpeed: 0.2 },
+  { distance: 6400000000n,  type: 'dwarf',      size: 0.22, pathSide: -1, pathOffset: 0.5 },
+  { distance: 6600000000n,  type: 'dwarf',      size: 0.22, pathSide: 1,  pathOffset: 0.55 },
+  { distance: 7200000000n,  type: 'dwarf',      size: 0.24, pathSide: -1, pathOffset: 0.45 },
+  { distance: 24000000000n, type: 'probe',      size: 0.16, pathSide: 0,  pathOffset: 0 },
+  { distance: 17000000000n, type: 'probe',      size: 0.16, pathSide: 1,  pathOffset: 0.3 },
+  { distance: 8000000000n,  type: 'probe',      size: 0.14, pathSide: -1, pathOffset: 0.3 },
+  { distance: 40000000000000n, type: 'star',    size: 0.9,  pathSide: 0,  pathOffset: 0 },
+  { distance: 81000000000000n, type: 'star',    size: 0.85, pathSide: -1, pathOffset: 0.3 },
+  { distance: 6400000000000000n, type: 'supergiant', size: 1.1, pathSide: 1, pathOffset: 0.25 }
+];
+
+const asteroidBelt = [];
+for (let i = 0; i < 50; i++) {
+  const verts = 6 + Math.floor(Math.random() * 4);
+  const angles = [];
+  for (let v = 0; v < verts; v++) {
+    angles.push((v / verts) * Math.PI * 2 + (Math.random() - 0.5) * 0.4);
+  }
+  asteroidBelt.push({
+    distance: 300000000 + Math.random() * 180000000,
+    xOff: (Math.random() - 0.5) * 0.9,
+    yOff: (Math.random() - 0.5) * 0.7,
+    size: 0.5 + Math.random() * 1.8,
+    alpha: 0.3 + Math.random() * 0.5,
+    verts: angles, rot: Math.random() * Math.PI * 2, rotSpeed: (Math.random() - 0.5) * 0.5
+  });
+}
+
+const kuiperBelt = [];
+for (let i = 0; i < 40; i++) {
+  const verts = 5 + Math.floor(Math.random() * 4);
+  const angles = [];
+  for (let v = 0; v < verts; v++) {
+    angles.push((v / verts) * Math.PI * 2 + (Math.random() - 0.5) * 0.5);
+  }
+  kuiperBelt.push({
+    distance: 4500000000 + Math.random() * 3000000000,
+    xOff: (Math.random() - 0.5) * 0.9,
+    yOff: (Math.random() - 0.5) * 0.7,
+    size: 0.5 + Math.random() * 1.4,
+    alpha: 0.25 + Math.random() * 0.4,
+    verts: angles, rot: Math.random() * Math.PI * 2, rotSpeed: (Math.random() - 0.5) * 0.4
+  });
+}
+
+const SCALE_MARKS = [
+  { km: 1,                  label: 'Земля',    level: 0 },
+  { km: 384400,             label: 'Луна',     level: 1 },
+  { km: 225000000,          label: 'Марс',     level: 0 },
+  { km: 390000000,          label: 'Пояс',     level: 1 },
+  { km: 628000000,          label: 'Юпитер',   level: 0 },
+  { km: 1275000000,         label: 'Сатурн',   level: 1 },
+  { km: 2723000000,         label: 'Уран',     level: 0 },
+  { km: 4351000000,         label: 'Нептун',   level: 1 },
+  { km: 5906000000,         label: 'Плутон',   level: 0 },
+  { km: 24000000000,        label: 'Вояджер',  level: 1 },
+  { km: 40000000000000,     label: 'α Cen',    level: 0 }
+];
+const LOG_MAX = 14;
+
+const distanceEl = document.getElementById('distance');
+const counterEl = document.getElementById('counter');
+const milestoneEl = document.getElementById('milestone');
+const hintEl = document.getElementById('hint');
+
+/* =========================================================
+   ПРОСМОТР — утилиты
+   ========================================================= */
+function getCurrentKm() {
+  return reviewMode ? viewKm : Number(distance);
+}
+
+function sliderPosToKm(pos) {
+  // Логарифмическая шкала: pos 0 → 1 км, pos 1000 → reviewMaxKm
+  if (reviewMaxKm <= 1) return 1;
+  const logMax = Math.log10(reviewMaxKm);
+  const logKm = (pos / 1000) * logMax;
+  return Math.pow(10, logKm);
+}
+
+function kmToSliderPos(km) {
+  if (km < 1) km = 1;
+  if (reviewMaxKm <= 1) return 0;
+  const logMax = Math.log10(reviewMaxKm);
+  const logKm = Math.log10(km);
+  const pos = (logKm / logMax) * 1000;
+  return Math.max(0, Math.min(1000, pos));
+}
+
+function formatDistance(n) {
+  if (n < 0n) n = 0n;
+  const s = n.toString();
+  if (s.length <= 15) return s.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+  const exp = s.length - 1;
+  return s[0] + '.' + s.substring(1, 3) + ' × 10^' + exp;
+}
+
+function formatKmNumber(km) {
+  if (km < 1) return '1 км';
+  if (km < 1000000) return Math.round(km).toLocaleString('ru-RU') + ' км';
+  const exp = Math.floor(Math.log10(km));
+  const mantissa = km / Math.pow(10, exp);
+  return mantissa.toFixed(2) + ' × 10^' + exp + ' км';
+}
+
+const canvas = document.getElementById('space');
+const ctx = canvas.getContext('2d');
+let W, H;
+function resize() { W = canvas.width = window.innerWidth; H = canvas.height = window.innerHeight; }
+resize();
+window.addEventListener('resize', resize);
+
+/* =========================================================
+   ТУМАННОСТИ
+   ========================================================= */
+const nebulae = [
+  { x: 0.22, y: 0.28, r: 0.65, color: [80, 40, 140],  alpha: 0.11 },
+  { x: 0.78, y: 0.35, r: 0.55, color: [40, 80, 160],  alpha: 0.09 },
+  { x: 0.50, y: 0.72, r: 0.75, color: [140, 60, 100], alpha: 0.07 },
+  { x: 0.12, y: 0.78, r: 0.55, color: [40, 100, 140], alpha: 0.08 },
+  { x: 0.88, y: 0.82, r: 0.45, color: [100, 60, 140], alpha: 0.06 }
+];
+
+function drawNebulae() {
+  for (const n of nebulae) {
+    const x = n.x * W, y = n.y * H;
+    const r = n.r * Math.max(W, H);
+    const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+    const [cr, cg, cb] = n.color;
+    g.addColorStop(0, `rgba(${cr}, ${cg}, ${cb}, ${n.alpha})`);
+    g.addColorStop(0.55, `rgba(${cr}, ${cg}, ${cb}, ${n.alpha * 0.35})`);
+    g.addColorStop(1, `rgba(${cr}, ${cg}, ${cb}, 0)`);
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+  }
+}
+
+/* =========================================================
+   СОЛНЦЕ
+   ========================================================= */
+function drawSun(km) {
+  const auDist = km / 150000000;
+  const brightness = Math.max(0.25, 1 / (1 + auDist * 0.6));
+  const cx = W - 50, cy = 50;
+  const coreR = 3 + 4 * brightness;
+  const alpha = brightness;
+
+  let g = ctx.createRadialGradient(cx, cy, 0, cx, cy, 60 + 40 * brightness);
+  g.addColorStop(0, `rgba(255, 245, 220, ${alpha * 0.7})`);
+  g.addColorStop(0.2, `rgba(255, 220, 150, ${alpha * 0.35})`);
+  g.addColorStop(0.5, `rgba(255, 180, 90, ${alpha * 0.1})`);
+  g.addColorStop(1, 'rgba(255, 180, 90, 0)');
+  ctx.fillStyle = g;
+  ctx.beginPath(); ctx.arc(cx, cy, 60 + 40 * brightness, 0, Math.PI * 2); ctx.fill();
+
+  g = ctx.createRadialGradient(cx, cy, 0, cx, cy, coreR * 4);
+  g.addColorStop(0, `rgba(255, 255, 255, ${alpha})`);
+  g.addColorStop(0.3, `rgba(255, 245, 200, ${alpha * 0.85})`);
+  g.addColorStop(1, `rgba(255, 220, 130, 0)`);
+  ctx.fillStyle = g;
+  ctx.beginPath(); ctx.arc(cx, cy, coreR * 4, 0, Math.PI * 2); ctx.fill();
+}
+
+/* =========================================================
+   ЗВЁЗДЫ
+   ========================================================= */
+const LAYERS = [
+  { speedMul: 0.35, sizeMul: 0.6, alphaMul: 0.55, count: 200 },
+  { speedMul: 1.0,  sizeMul: 1.0, alphaMul: 0.85, count: 140 },
+  { speedMul: 2.2,  sizeMul: 1.7, alphaMul: 1.0,  count: 60  }
+];
+
+const stars = [];
+for (let li = 0; li < LAYERS.length; li++) {
+  for (let i = 0; i < LAYERS[li].count; i++) {
+    stars.push({
+      x: (Math.random() - 0.5) * W * 2.0,
+      y: (Math.random() - 0.5) * H * 2.0,
+      z: Math.random() * 1000 + 1,
+      layer: li
+    });
+  }
+}
+
+function drawStars() {
+  const km = getCurrentKm();
+  const starAlpha = 0.35 + Math.min(0.65, km / 200);
+
+  for (const star of stars) {
+    const layer = LAYERS[star.layer];
+    const effectiveSpeed = starsSpeed * layer.speedMul;
+    const oldZ = star.z;
+    star.z -= effectiveSpeed;
+    if (star.z <= 0) {
+      star.x = (Math.random() - 0.5) * W * 2.0;
+      star.y = (Math.random() - 0.5) * H * 2.0;
+      star.z = 1000;
+      continue;
+    }
+    const k = 300 / star.z;
+    const px = star.x * k + W / 2;
+    const py = star.y * k + H / 2;
+    const kOld = 300 / oldZ;
+    const pxOld = star.x * kOld + W / 2;
+    const pyOld = star.y * kOld + H / 2;
+    if (px < -50 || px > W + 50 || py < -50 || py > H + 50) continue;
+    const size = (1 - star.z / 1000) * 2.4 * layer.sizeMul;
+    const alpha = (1 - star.z / 1000) * starAlpha * layer.alphaMul;
+    const speedRatio = Math.max(0, Math.min(1, (starsSpeed - 3) / 8));
+    if (speedRatio > 0.1) {
+      const len = Math.abs(px - pxOld) + Math.abs(py - pyOld);
+      if (len > 1.5) {
+        ctx.beginPath();
+        ctx.moveTo(pxOld, pyOld);
+        ctx.lineTo(px, py);
+        ctx.strokeStyle = `rgba(200, 220, 255, ${alpha * (0.6 + speedRatio * 0.4)})`;
+        ctx.lineWidth = Math.max(0.4, size * (0.5 + speedRatio * 0.5));
+        ctx.stroke();
+        continue;
+      }
+    }
+    ctx.beginPath();
+    ctx.arc(px, py, size, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(200, 220, 255, ${alpha})`;
+    ctx.fill();
+  }
+}
+
+/* =========================================================
+   БАЗОВАЯ СФЕРА
+   ========================================================= */
+function drawPlanetSphere(x, y, r, colors, atmosphereColor, atmosphereStrength) {
+  if (atmosphereStrength > 0 && atmosphereColor) {
+    const [ar, ag, ab] = atmosphereColor;
+    const glow = ctx.createRadialGradient(x, y, r * 0.9, x, y, r * 1.4);
+    glow.addColorStop(0, `rgba(${ar}, ${ag}, ${ab}, ${0.45 * atmosphereStrength})`);
+    glow.addColorStop(0.5, `rgba(${ar}, ${ag}, ${ab}, ${0.2 * atmosphereStrength})`);
+    glow.addColorStop(1, `rgba(${ar}, ${ag}, ${ab}, 0)`);
+    ctx.fillStyle = glow;
+    ctx.beginPath(); ctx.arc(x, y, r * 1.4, 0, Math.PI * 2); ctx.fill();
+  }
+
+  const lightX = x + r * 0.4;
+  const lightY = y - r * 0.5;
+
+  const baseGrad = ctx.createRadialGradient(lightX, lightY, r * 0.05, x, y, r * 1.05);
+  for (let i = 0; i < colors.length; i++) {
+    baseGrad.addColorStop(i / (colors.length - 1), colors[i]);
+  }
+  ctx.fillStyle = baseGrad;
+  ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+
+  const dark = ctx.createRadialGradient(
+    x - r * 0.6, y + r * 0.7, r * 0.1,
+    x - r * 0.3, y + r * 0.4, r * 1.2
+  );
+  dark.addColorStop(0, 'rgba(0, 0, 0, 0)');
+  dark.addColorStop(0.5, 'rgba(0, 0, 0, 0.15)');
+  dark.addColorStop(1, 'rgba(0, 0, 0, 0.5)');
+  ctx.fillStyle = dark;
+  ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+
+  const highlight = ctx.createRadialGradient(lightX, lightY, 0, lightX, lightY, r * 0.6);
+  highlight.addColorStop(0, 'rgba(255, 255, 255, 0.2)');
+  highlight.addColorStop(1, 'rgba(255, 255, 255, 0)');
+  ctx.fillStyle = highlight;
+  ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+}
+
+/* =========================================================
+   ЗЕМЛЯ
+   ========================================================= */
+const CONTINENTS = [
+  { color: 'rgba(82, 115, 72, 0.88)',
+    points: [[-17,15],[-16,22],[-10,30],[-2,34],[8,36],[18,34],[28,32],[36,28],[42,18],[48,14],[52,10],[44,2],[41,-8],[39,-18],[35,-25],[28,-32],[20,-35],[14,-34],[12,-24],[10,-14],[6,-4],[2,3],[-4,4],[-10,4],[-14,8],[-17,15]] },
+  { color: 'rgba(95, 122, 78, 0.88)',
+    points: [[-10,36],[-9,42],[-6,46],[-1,48],[3,50],[6,55],[10,58],[16,60],[22,62],[28,66],[30,70],[26,64],[22,58],[18,52],[14,46],[10,42],[6,40],[2,38],[-4,38],[-10,36]] },
+  { color: 'rgba(88, 118, 72, 0.88)',
+    points: [[30,70],[45,74],[60,76],[80,76],[100,75],[120,72],[140,68],[155,62],[162,55],[155,45],[142,38],[125,32],[110,28],[98,24],[88,20],[78,22],[68,22],[58,24],[48,28],[40,32],[35,40],[31,50],[30,60],[30,70]] },
+  { color: 'rgba(90, 118, 76, 0.88)',
+    points: [[-170,65],[-160,68],[-145,70],[-130,72],[-115,71],[-100,70],[-85,72],[-70,68],[-58,60],[-55,52],[-60,46],[-68,40],[-75,32],[-85,25],[-95,20],[-102,18],[-108,22],[-115,28],[-122,35],[-125,45],[-125,55],[-135,60],[-150,63],[-165,64],[-170,65]] },
+  { color: 'rgba(80, 112, 68, 0.88)',
+    points: [[-80,12],[-70,10],[-60,8],[-52,4],[-46,0],[-40,-4],[-35,-10],[-36,-18],[-42,-24],[-50,-28],[-55,-35],[-62,-46],[-68,-55],[-73,-55],[-78,-48],[-80,-38],[-82,-25],[-83,-12],[-82,0],[-80,8],[-80,12]] },
+  { color: 'rgba(110, 122, 68, 0.88)',
+    points: [[114,-12],[122,-11],[132,-12],[142,-16],[150,-22],[154,-30],[150,-38],[142,-42],[132,-40],[124,-35],[117,-28],[113,-20],[114,-12]] },
+  { color: 'rgba(240, 245, 250, 0.9)',
+    points: [[-45,60],[-30,62],[-20,65],[-25,70],[-45,70],[-55,66],[-45,60]] },
+  { color: 'rgba(240, 245, 250, 0.9)',
+    points: [[130,-68],[150,-70],[165,-72],[150,-78],[130,-78],[125,-72],[130,-68]] }
+];
+
+const CITY_LIGHTS = [
+  [-74,40],[-87,41],[-118,34],[-122,37],[-99,19],[-46,-23],[-58,-34],
+  [0,51],[2,48],[13,52],[12,41],[37,55],[28,41],[55,25],[77,28],
+  [116,40],[121,31],[139,35],[126,37],[100,13],[103,1],[106,-6],
+  [151,-33],[144,-37],[18,-33],[31,30],[3,6],[28,-26],[45,25],
+  [72,19],[-70,19],[114,-8],[107,-7],[-43,-22]
+];
+
+function projectSphere(lonDeg, latDeg, cx, cy, r) {
+  const lon = lonDeg * Math.PI / 180;
+  const lat = latDeg * Math.PI / 180;
+  const cosLat = Math.cos(lat);
+  const sinLat = Math.sin(lat);
+  const cosLon = Math.cos(lon);
+  const sinLon = Math.sin(lon);
+  if (cosLon <= 0.05) return null;
+  return { x: cx + r * sinLon * cosLat, y: cy - r * sinLat, depth: cosLon };
+}
+
+function smoothPolygon(points) {
+  if (points.length < 3) return;
+  ctx.beginPath();
+  const n = points.length;
+  const startX = (points[n-1].x + points[0].x) / 2;
+  const startY = (points[n-1].y + points[0].y) / 2;
+  ctx.moveTo(startX, startY);
+  for (let i = 0; i < n; i++) {
+    const p = points[i];
+    const next = points[(i + 1) % n];
+    const mx = (p.x + next.x) / 2;
+    const my = (p.y + next.y) / 2;
+    ctx.quadraticCurveTo(p.x, p.y, mx, my);
+  }
+  ctx.closePath();
+}
+
+function drawEarth(km) {
+  const r = W * 0.9 / (1 + Math.sqrt(Math.max(km, 0) / 500));
+  const cx = W / 2, cy = H * 0.88;
+  if (r < 3) return;
+
+  const lightX = cx + r * 0.45;
+  const lightY = cy - r * 0.55;
+
+  let g = ctx.createRadialGradient(cx, cy, r * 0.9, cx, cy, r * 1.22);
+  g.addColorStop(0, 'rgba(90, 160, 240, 0.5)');
+  g.addColorStop(0.4, 'rgba(70, 130, 210, 0.22)');
+  g.addColorStop(1, 'rgba(70, 130, 210, 0)');
+  ctx.fillStyle = g;
+  ctx.beginPath(); ctx.arc(cx, cy, r * 1.22, 0, Math.PI * 2); ctx.fill();
+
+  g = ctx.createRadialGradient(lightX, lightY, r * 0.05, cx, cy, r * 1.05);
+  g.addColorStop(0, '#3d7ba8');
+  g.addColorStop(0.3, '#1e5688');
+  g.addColorStop(0.6, '#0e3a62');
+  g.addColorStop(0.85, '#062242');
+  g.addColorStop(1, '#02132a');
+  ctx.fillStyle = g;
+  ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
+
+  ctx.save();
+  ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.clip();
+
+  const rotation = globalTime * 3;
+
+  for (const cont of CONTINENTS) {
+    const projected = [];
+    for (const [lon, lat] of cont.points) {
+      const p = projectSphere(lon + rotation, lat, cx, cy, r);
+      if (p) projected.push(p);
+    }
+    if (projected.length < 3) continue;
+
+    smoothPolygon(projected);
+    ctx.strokeStyle = 'rgba(30, 55, 35, 0.5)';
+    ctx.lineWidth = Math.max(0.5, r * 0.008);
+    ctx.stroke();
+    ctx.fillStyle = cont.color;
+    ctx.fill();
+
+    ctx.save();
+    ctx.clip();
+    const contLight = ctx.createRadialGradient(lightX, lightY, 0, lightX, lightY, r * 1.2);
+    contLight.addColorStop(0, 'rgba(255, 240, 200, 0.2)');
+    contLight.addColorStop(0.5, 'rgba(255, 240, 200, 0)');
+    ctx.fillStyle = contLight;
+    ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
+    ctx.restore();
+  }
+
+  const northGrad = ctx.createRadialGradient(cx, cy - r * 0.9, r * 0.05, cx, cy - r * 0.9, r * 0.85);
+  northGrad.addColorStop(0, 'rgba(250, 253, 255, 0.95)');
+  northGrad.addColorStop(0.5, 'rgba(235, 245, 255, 0.7)');
+  northGrad.addColorStop(1, 'rgba(235, 245, 255, 0)');
+  ctx.fillStyle = northGrad;
+  ctx.beginPath(); ctx.ellipse(cx, cy - r * 0.9, r * 0.75, r * 0.45, 0, 0, Math.PI * 2); ctx.fill();
+
+  const southGrad = ctx.createRadialGradient(cx, cy + r * 0.95, r * 0.05, cx, cy + r * 0.95, r * 1.0);
+  southGrad.addColorStop(0, 'rgba(250, 253, 255, 0.98)');
+  southGrad.addColorStop(0.4, 'rgba(235, 245, 255, 0.75)');
+  southGrad.addColorStop(1, 'rgba(235, 245, 255, 0)');
+  ctx.fillStyle = southGrad;
+  ctx.beginPath(); ctx.ellipse(cx, cy + r * 1.0, r * 1.0, r * 0.65, 0, 0, Math.PI * 2); ctx.fill();
+
+  const cloudRotation = globalTime * 5;
+  const cloudSpots = [
+    { lon: 0,   lat: 60, r: 0.35, alpha: 0.55, stretch: 1.8 },
+    { lon: 60,  lat: 30, r: 0.28, alpha: 0.45, stretch: 2.2 },
+    { lon: 120, lat: -20, r: 0.4, alpha: 0.6, stretch: 2.0 },
+    { lon: 180, lat: 40, r: 0.3, alpha: 0.5, stretch: 1.7 },
+    { lon: 240, lat: 0,  r: 0.35, alpha: 0.55, stretch: 2.4 },
+    { lon: 300, lat: 50, r: 0.25, alpha: 0.45, stretch: 1.9 },
+    { lon: 30,  lat: -50, r: 0.45, alpha: 0.6, stretch: 1.6 },
+    { lon: 200, lat: -40, r: 0.35, alpha: 0.5, stretch: 2.1 },
+    { lon: 100, lat: 20, r: 0.18, alpha: 0.4, stretch: 2.5 },
+    { lon: 280, lat: -30, r: 0.22, alpha: 0.45, stretch: 2.0 },
+    { lon: 150, lat: 60, r: 0.2, alpha: 0.4, stretch: 1.8 },
+    { lon: 350, lat: -10, r: 0.26, alpha: 0.48, stretch: 2.3 }
+  ];
+
+  for (const c of cloudSpots) {
+    const p = projectSphere(c.lon + cloudRotation, c.lat, cx, cy, r);
+    if (!p) continue;
+    const cloudR = r * c.r * p.depth;
+    if (cloudR < 1) continue;
+    for (let l = 0; l < 3; l++) {
+      const lr = cloudR * (1 - l * 0.25);
+      const la = c.alpha * (1 - l * 0.2) * p.depth;
+      const offsetX = Math.sin(globalTime * 0.3 + c.lon) * lr * 0.15;
+      const offsetY = Math.cos(globalTime * 0.2 + c.lat) * lr * 0.1;
+      const cloudGrad = ctx.createRadialGradient(p.x + offsetX, p.y + offsetY, 0, p.x + offsetX, p.y + offsetY, lr);
+      cloudGrad.addColorStop(0, `rgba(255, 255, 255, ${la})`);
+      cloudGrad.addColorStop(0.6, `rgba(255, 255, 255, ${la * 0.35})`);
+      cloudGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+      ctx.fillStyle = cloudGrad;
+      ctx.beginPath();
+      ctx.ellipse(p.x + offsetX, p.y + offsetY, lr * c.stretch * 0.5, lr * 0.6, 0.2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  const nightX = cx - r * 0.5;
+  const nightY = cy + r * 0.55;
+
+  for (const [lon, lat] of CITY_LIGHTS) {
+    const p = projectSphere(lon + rotation, lat, cx, cy, r);
+    if (!p) continue;
+    const dx = p.x - nightX, dy = p.y - nightY;
+    const distToNight = Math.sqrt(dx*dx + dy*dy);
+    const nightFactor = 1 - Math.min(1, distToNight / (r * 0.95));
+    if (nightFactor < 0.35) continue;
+    const lightAlpha = (nightFactor - 0.35) / 0.65;
+    const lightR = Math.max(1, r * 0.012 * p.depth + 0.8);
+    const lightGrad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, lightR * 3);
+    lightGrad.addColorStop(0, `rgba(255, 220, 130, ${lightAlpha * p.depth * 0.9})`);
+    lightGrad.addColorStop(0.4, `rgba(255, 170, 80, ${lightAlpha * p.depth * 0.5})`);
+    lightGrad.addColorStop(1, 'rgba(255, 170, 80, 0)');
+    ctx.fillStyle = lightGrad;
+    ctx.beginPath(); ctx.arc(p.x, p.y, lightR * 3, 0, Math.PI * 2); ctx.fill();
+  }
+
+  const specular = ctx.createRadialGradient(lightX, lightY, 0, lightX, lightY, r * 0.55);
+  specular.addColorStop(0, 'rgba(255, 250, 220, 0.3)');
+  specular.addColorStop(0.4, 'rgba(255, 250, 220, 0.1)');
+  specular.addColorStop(1, 'rgba(255, 250, 220, 0)');
+  ctx.fillStyle = specular;
+  ctx.beginPath(); ctx.arc(lightX, lightY, r * 0.55, 0, Math.PI * 2); ctx.fill();
+
+  const haze = ctx.createRadialGradient(cx, cy, r * 0.7, cx, cy, r);
+  haze.addColorStop(0, 'rgba(140, 200, 255, 0)');
+  haze.addColorStop(0.85, 'rgba(140, 200, 255, 0.08)');
+  haze.addColorStop(1, 'rgba(140, 200, 255, 0.3)');
+  ctx.fillStyle = haze;
+  ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
+
+  const dark = ctx.createRadialGradient(
+    cx - r * 0.55, cy + r * 0.65, r * 0.2,
+    cx - r * 0.4, cy + r * 0.5, r * 1.15
+  );
+  dark.addColorStop(0, 'rgba(0, 0, 0, 0)');
+  dark.addColorStop(0.4, 'rgba(0, 0, 0, 0.2)');
+  dark.addColorStop(0.75, 'rgba(0, 0, 0, 0.5)');
+  dark.addColorStop(1, 'rgba(0, 0, 0, 0.78)');
+  ctx.fillStyle = dark;
+  ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
+
+  ctx.restore();
+
+  ctx.strokeStyle = 'rgba(140, 210, 255, 0.55)';
+  ctx.lineWidth = Math.max(1, r * 0.008);
+  ctx.beginPath(); ctx.arc(cx, cy, r * 1.005, 0, Math.PI * 2); ctx.stroke();
+}
+
+/* =========================================================
+   ОБЪЕКТЫ
+   ========================================================= */
+function drawBody(body, km) {
+  const objKm = Number(body.distance);
+  const ratio = km / objKm;
+  if (ratio < 0.3 || ratio > 1.9) return;
+  const delta = km - objKm;
+  const absDelta = Math.abs(delta);
+  const visibility = objKm * 0.9;
+  if (absDelta > visibility) return;
+  const proximity = 1 - absDelta / visibility;
+  const baseSize = Math.min(W, H) * body.size;
+  const size = baseSize * (0.1 + proximity * 0.9);
+  const r = size * 0.5;
+  const side = body.pathSide || 0;
+  const offset = body.pathOffset || 0;
+  const xFactor = side * W * offset * (0.6 + (1 - proximity) * 0.6);
+  const x = W / 2 + xFactor;
+  const y = H / 2 + (delta / visibility) * H * 0.45;
+  if (y + r * 1.5 < -200 || y - r * 1.5 > H + 200) return;
+  if (size < 3) return;
+  const opacity = Math.min(1, (size - 3) / 12);
+  ctx.globalAlpha = opacity;
+
+  if (body.type === 'moon')        drawMoon(x, y, r, body);
+  else if (body.type === 'mars')   drawMars(x, y, r, body);
+  else if (body.type === 'venus')  drawVenus(x, y, r, body);
+  else if (body.type === 'mercury')drawMercury(x, y, r, body);
+  else if (body.type === 'jupiter')drawJupiter(x, y, r, body);
+  else if (body.type === 'saturn') drawSaturn(x, y, r, body);
+  else if (body.type === 'uranus') drawUranus(x, y, r, body);
+  else if (body.type === 'neptune')drawNeptune(x, y, r, body);
+  else if (body.type === 'pluto')  drawPluto(x, y, r, body);
+  else if (body.type === 'dwarf')  drawDwarf(x, y, r, body);
+  else if (body.type === 'station')drawStation(x, y, r);
+  else if (body.type === 'hubble') drawHubble(x, y, r);
+  else if (body.type === 'starlink')drawStarlink(x, y, r);
+  else if (body.type === 'satellite')drawSatellite(x, y, r);
+  else if (body.type === 'point')  drawLagrangePoint(x, y, r);
+  else if (body.type === 'galilean')drawGalilean(x, y, r);
+  else if (body.type === 'titan')  drawTitan(x, y, r, body);
+  else if (body.type === 'probe')  drawProbe(x, y, r);
+  else if (body.type === 'star')   drawStarBody(x, y, r);
+  else if (body.type === 'supergiant')drawSupergiant(x, y, r);
+
+  ctx.globalAlpha = 1;
+}
+
+const MOON_CRATERS = [
+  { lon: -20, lat: 10, r: 0.12 }, { lon: 15, lat: -8, r: 0.14 },
+  { lon: 40, lat: 25, r: 0.09 },  { lon: -50, lat: -25, r: 0.11 },
+  { lon: 80, lat: -15, r: 0.08 }, { lon: -80, lat: 30, r: 0.07 },
+  { lon: 0, lat: -40, r: 0.1 },   { lon: 60, lat: 5, r: 0.06 },
+  { lon: -35, lat: 45, r: 0.05 }, { lon: 100, lat: 20, r: 0.07 },
+  { lon: -100, lat: -10, r: 0.08 }, { lon: 30, lat: -30, r: 0.06 }
+];
+const MOON_MARIA = [
+  { lon: -25, lat: 20, r: 0.3 },
+  { lon: 10, lat: 30, r: 0.25 },
+  { lon: -50, lat: 10, r: 0.22 }
+];
+
+function drawMoon(x, y, r, body) {
+  drawPlanetSphere(x, y, r,
+    ['#f4f4f8', '#dcdce4', '#b8b8c4', '#80808c', '#3a3a48'],
+    [200, 210, 230], 0.12);
+  if (r > 12) {
+    ctx.save();
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.clip();
+    const rot = (body.rotationSpeed || 0.15) * globalTime;
+    for (const m of MOON_MARIA) {
+      const p = projectSphere(m.lon + rot, m.lat, x, y, r);
+      if (!p) continue;
+      const mr = r * m.r * p.depth;
+      if (mr < 2) continue;
+      const seaGrad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, mr);
+      seaGrad.addColorStop(0, 'rgba(60, 62, 75, 0.5)');
+      seaGrad.addColorStop(0.7, 'rgba(75, 78, 92, 0.3)');
+      seaGrad.addColorStop(1, 'rgba(75, 78, 92, 0)');
+      ctx.fillStyle = seaGrad;
+      ctx.beginPath(); ctx.arc(p.x, p.y, mr, 0, Math.PI * 2); ctx.fill();
+    }
+    for (const c of MOON_CRATERS) {
+      const p = projectSphere(c.lon + rot, c.lat, x, y, r);
+      if (!p) continue;
+      const cr = r * c.r * p.depth;
+      if (cr < 1.5) continue;
+      const lx = Math.cos(-Math.PI * 0.7) * cr * 0.3;
+      const ly = Math.sin(-Math.PI * 0.7) * cr * 0.3;
+      ctx.fillStyle = `rgba(50, 52, 65, ${0.55 * p.depth})`;
+      ctx.beginPath(); ctx.arc(p.x - lx, p.y - ly, cr * 0.9, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = `rgba(220, 225, 235, ${0.5 * p.depth})`;
+      ctx.beginPath(); ctx.arc(p.x + lx, p.y + ly, cr * 0.85, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = `rgba(45, 48, 60, ${0.5 * p.depth})`;
+      ctx.beginPath(); ctx.arc(p.x, p.y, cr * 0.65, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = `rgba(180, 185, 200, ${0.3 * p.depth})`;
+      ctx.beginPath(); ctx.arc(p.x + lx * 0.3, p.y + ly * 0.3, cr * 0.25, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.restore();
+  }
+}
+
+function drawMars(x, y, r, body) {
+  drawPlanetSphere(x, y, r,
+    ['#f4b088', '#e07040', '#c1440e', '#8a2e08', '#3a0d02'],
+    [255, 140, 80], 0.25);
+  if (r > 12) {
+    ctx.save();
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.clip();
+    const rot = (body.rotationSpeed || 0.25) * globalTime;
+    const poleGrad = ctx.createRadialGradient(x, y - r * 0.9, r * 0.05, x, y - r * 0.9, r * 0.5);
+    poleGrad.addColorStop(0, 'rgba(255, 255, 255, 0.85)');
+    poleGrad.addColorStop(0.6, 'rgba(255, 250, 245, 0.4)');
+    poleGrad.addColorStop(1, 'rgba(255, 250, 245, 0)');
+    ctx.fillStyle = poleGrad;
+    ctx.beginPath(); ctx.ellipse(x, y - r * 0.85, r * 0.35, r * 0.18, 0, 0, Math.PI * 2); ctx.fill();
+    if (r > 25) {
+      const darks = [
+        { lon: 20, lat: 5, r: 0.35, a: 0.35 }, { lon: -40, lat: -10, r: 0.28, a: 0.3 },
+        { lon: 70, lat: -25, r: 0.3, a: 0.28 }, { lon: -100, lat: 20, r: 0.25, a: 0.25 },
+        { lon: 140, lat: 15, r: 0.22, a: 0.25 }
+      ];
+      for (const d of darks) {
+        const p = projectSphere(d.lon + rot, d.lat, x, y, r);
+        if (!p) continue;
+        const dr = r * d.r * p.depth;
+        if (dr < 2) continue;
+        const dg = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, dr);
+        dg.addColorStop(0, `rgba(70, 25, 8, ${d.a * p.depth})`);
+        dg.addColorStop(0.7, `rgba(90, 35, 15, ${d.a * 0.5 * p.depth})`);
+        dg.addColorStop(1, 'rgba(90, 35, 15, 0)');
+        ctx.fillStyle = dg;
+        ctx.beginPath(); ctx.ellipse(p.x, p.y, dr, dr * 0.65, 0.3, 0, Math.PI * 2); ctx.fill();
+      }
+    }
+    ctx.restore();
+  }
+}
+
+function drawVenus(x, y, r, body) {
+  drawPlanetSphere(x, y, r,
+    ['#f8ecc0', '#e8d090', '#c8a850', '#8a7030', '#3a2a10'],
+    [255, 220, 140], 0.4);
+  if (r > 20) {
+    ctx.save();
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.clip();
+    for (let i = 0; i < 3; i++) {
+      const yOff = (i - 1) * r * 0.35;
+      const shift = Math.sin(globalTime * 0.5 + i) * r * 0.15;
+      const cg = ctx.createLinearGradient(x - r, y + yOff, x + r, y + yOff);
+      cg.addColorStop(0, 'rgba(255, 240, 200, 0)');
+      cg.addColorStop(0.3, 'rgba(255, 240, 200, 0.25)');
+      cg.addColorStop(0.7, 'rgba(255, 230, 180, 0.25)');
+      cg.addColorStop(1, 'rgba(255, 240, 200, 0)');
+      ctx.fillStyle = cg;
+      ctx.fillRect(x - r + shift, y + yOff - r * 0.1, r * 2, r * 0.2);
+    }
+    ctx.restore();
+  }
+}
+
+function drawMercury(x, y, r, body) {
+  drawPlanetSphere(x, y, r,
+    ['#c8c0b0', '#a09888', '#706858', '#403830', '#181410'],
+    [180, 170, 150], 0.08);
+  if (r > 20) {
+    ctx.save();
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.clip();
+    const rot = (body.rotationSpeed || 0.3) * globalTime;
+    for (let i = 0; i < 8; i++) {
+      const lon = (i * 47) % 360;
+      const lat = Math.sin(i * 1.3) * 40;
+      const p = projectSphere(lon + rot, lat, x, y, r);
+      if (!p) continue;
+      const cr = r * 0.08 * p.depth;
+      if (cr < 1) continue;
+      ctx.fillStyle = `rgba(50, 48, 42, ${0.5 * p.depth})`;
+      ctx.beginPath(); ctx.arc(p.x, p.y, cr * 0.9, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = `rgba(180, 175, 165, ${0.4 * p.depth})`;
+      ctx.beginPath(); ctx.arc(p.x - cr * 0.25, p.y - cr * 0.25, cr * 0.6, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.restore();
+  }
+}
+
+function drawJupiter(x, y, r, body) {
+  drawPlanetSphere(x, y, r,
+    ['#f0d0a0', '#e0bc80', '#c8a068', '#907858', '#4a3520'],
+    [255, 220, 160], 0.3);
+  if (r > 12) {
+    ctx.save();
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.clip();
+    const rot = (body.rotationSpeed || 0.4) * globalTime;
+    const shift = ((rot % 1) * 2 - 1) * r * 0.1;
+    const bands = [
+      { y: -0.75, h: 0.08, c: 'rgba(200, 160, 120, 0.55)', amp: 0.02 },
+      { y: -0.6,  h: 0.1,  c: 'rgba(245, 225, 190, 0.55)', amp: 0.03 },
+      { y: -0.45, h: 0.08, c: 'rgba(180, 140, 100, 0.6)',  amp: 0.025 },
+      { y: -0.32, h: 0.1,  c: 'rgba(250, 235, 205, 0.5)',  amp: 0.035 },
+      { y: -0.18, h: 0.08, c: 'rgba(190, 145, 105, 0.6)',  amp: 0.03 },
+      { y: -0.05, h: 0.12, c: 'rgba(240, 215, 175, 0.55)', amp: 0.04 },
+      { y: 0.1,   h: 0.1,  c: 'rgba(180, 130, 90, 0.65)',  amp: 0.035 },
+      { y: 0.25,  h: 0.1,  c: 'rgba(245, 225, 190, 0.5)',  amp: 0.03 },
+      { y: 0.4,   h: 0.09, c: 'rgba(190, 150, 110, 0.6)',  amp: 0.025 },
+      { y: 0.55,  h: 0.1,  c: 'rgba(240, 220, 180, 0.5)',  amp: 0.03 },
+      { y: 0.7,   h: 0.08, c: 'rgba(200, 160, 120, 0.5)',  amp: 0.02 }
+    ];
+    for (let bi = 0; bi < bands.length; bi++) {
+      const b = bands[bi];
+      const baseY = y + b.y * r + shift;
+      const bandH = b.h * r;
+      ctx.beginPath();
+      const steps = 30;
+      ctx.moveTo(x - r, baseY);
+      for (let i = 0; i <= steps; i++) {
+        const t = i / steps;
+        const px = x - r + r * 2 * t;
+        const wave1 = Math.sin(t * 6 + bi * 1.7 + globalTime * 0.5) * b.amp * r;
+        const wave2 = Math.sin(t * 14 + bi * 2.3 + globalTime * 0.7) * b.amp * r * 0.4;
+        ctx.lineTo(px, baseY + wave1 + wave2);
+      }
+      for (let i = steps; i >= 0; i--) {
+        const t = i / steps;
+        const px = x - r + r * 2 * t;
+        const wave1 = Math.sin(t * 6 + bi * 1.7 + globalTime * 0.5) * b.amp * r;
+        const wave2 = Math.sin(t * 14 + bi * 2.3 + globalTime * 0.7) * b.amp * r * 0.4;
+        ctx.lineTo(px, baseY + bandH + wave1 + wave2);
+      }
+      ctx.closePath();
+      ctx.fillStyle = b.c;
+      ctx.fill();
+    }
+    if (r > 30) {
+      const spotX = x + r * 0.3 + shift;
+      const spotY = y + r * 0.18;
+      const spotR = r * 0.2;
+      const outerGrad = ctx.createRadialGradient(spotX, spotY, 0, spotX, spotY, spotR * 1.6);
+      outerGrad.addColorStop(0, 'rgba(230, 120, 80, 0.5)');
+      outerGrad.addColorStop(0.6, 'rgba(220, 100, 60, 0.25)');
+      outerGrad.addColorStop(1, 'rgba(220, 100, 60, 0)');
+      ctx.fillStyle = outerGrad;
+      ctx.beginPath(); ctx.ellipse(spotX, spotY, spotR * 1.6, spotR * 0.85, 0, 0, Math.PI * 2); ctx.fill();
+      const spotGrad = ctx.createRadialGradient(spotX, spotY, 0, spotX, spotY, spotR);
+      spotGrad.addColorStop(0, 'rgba(210, 90, 60, 0.9)');
+      spotGrad.addColorStop(0.7, 'rgba(190, 70, 45, 0.75)');
+      spotGrad.addColorStop(1, 'rgba(170, 60, 40, 0)');
+      ctx.fillStyle = spotGrad;
+      ctx.beginPath(); ctx.ellipse(spotX, spotY, spotR, spotR * 0.55, 0, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.restore();
+  }
+}
+
+function drawSaturn(x, y, r, body) {
+  if (r > 8) {
+    ctx.save();
+    ctx.translate(x, y); ctx.rotate(-0.3);
+    ctx.strokeStyle = 'rgba(240, 220, 180, 0.75)';
+    ctx.lineWidth = r * 0.15;
+    ctx.beginPath(); ctx.ellipse(0, 0, r * 1.85, r * 0.42, 0, 0, Math.PI * 2); ctx.stroke();
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
+    ctx.lineWidth = r * 0.03;
+    ctx.beginPath(); ctx.ellipse(0, 0, r * 2.0, r * 0.46, 0, 0, Math.PI * 2); ctx.stroke();
+    ctx.strokeStyle = 'rgba(220, 200, 165, 0.65)';
+    ctx.lineWidth = r * 0.1;
+    ctx.beginPath(); ctx.ellipse(0, 0, r * 2.13, r * 0.49, 0, 0, Math.PI * 2); ctx.stroke();
+    ctx.strokeStyle = 'rgba(200, 180, 150, 0.35)';
+    ctx.lineWidth = r * 0.05;
+    ctx.beginPath(); ctx.ellipse(0, 0, r * 1.6, r * 0.36, 0, 0, Math.PI * 2); ctx.stroke();
+    ctx.restore();
+  }
+  drawPlanetSphere(x, y, r,
+    ['#f8ecc8', '#e8d8a0', '#d0b878', '#907850', '#3a2a18'],
+    [255, 240, 200], 0.3);
+  if (r > 12) {
+    ctx.save();
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.clip();
+    const rot = (body.rotationSpeed || 0.35) * globalTime;
+    const shift = ((rot % 1) * 2 - 1) * r * 0.08;
+    const bands = [
+      { y: -0.65, h: 0.1, c: 'rgba(240, 225, 185, 0.5)', amp: 0.015 },
+      { y: -0.4, h: 0.12, c: 'rgba(225, 205, 165, 0.5)', amp: 0.02 },
+      { y: -0.15, h: 0.15, c: 'rgba(245, 230, 190, 0.5)', amp: 0.025 },
+      { y: 0.15, h: 0.14, c: 'rgba(230, 210, 170, 0.5)', amp: 0.02 },
+      { y: 0.42, h: 0.12, c: 'rgba(245, 230, 190, 0.5)', amp: 0.02 },
+      { y: 0.62, h: 0.1, c: 'rgba(230, 210, 170, 0.5)', amp: 0.015 }
+    ];
+    for (let bi = 0; bi < bands.length; bi++) {
+      const b = bands[bi];
+      const baseY = y + b.y * r + shift;
+      const bandH = b.h * r;
+      ctx.beginPath();
+      const steps = 25;
+      ctx.moveTo(x - r, baseY);
+      for (let i = 0; i <= steps; i++) {
+        const t = i / steps;
+        const px = x - r + r * 2 * t;
+        const wave = Math.sin(t * 5 + bi * 1.5 + globalTime * 0.4) * b.amp * r;
+        ctx.lineTo(px, baseY + wave);
+      }
+      for (let i = steps; i >= 0; i--) {
+        const t = i / steps;
+        const px = x - r + r * 2 * t;
+        const wave = Math.sin(t * 5 + bi * 1.5 + globalTime * 0.4) * b.amp * r;
+        ctx.lineTo(px, baseY + bandH + wave);
+      }
+      ctx.closePath();
+      ctx.fillStyle = b.c;
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+  if (r > 8) {
+    ctx.save();
+    ctx.translate(x, y); ctx.rotate(-0.3);
+    ctx.strokeStyle = 'rgba(245, 225, 185, 0.9)';
+    ctx.lineWidth = r * 0.15;
+    ctx.beginPath(); ctx.ellipse(0, 0, r * 1.85, r * 0.42, 0, Math.PI * 0.82, Math.PI * 1.18); ctx.stroke();
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.6)';
+    ctx.lineWidth = r * 0.03;
+    ctx.beginPath(); ctx.ellipse(0, 0, r * 2.0, r * 0.46, 0, Math.PI * 0.82, Math.PI * 1.18); ctx.stroke();
+    ctx.strokeStyle = 'rgba(230, 210, 170, 0.8)';
+    ctx.lineWidth = r * 0.1;
+    ctx.beginPath(); ctx.ellipse(0, 0, r * 2.13, r * 0.49, 0, Math.PI * 0.82, Math.PI * 1.18); ctx.stroke();
+    ctx.restore();
+  }
+}
+
+function drawUranus(x, y, r, body) {
+  drawPlanetSphere(x, y, r,
+    ['#e8f4f8', '#c8e8f4', '#a0d4e4', '#6090a0', '#203a48'],
+    [160, 220, 240], 0.45);
+}
+
+function drawNeptune(x, y, r, body) {
+  drawPlanetSphere(x, y, r,
+    ['#a8c0e8', '#6080d0', '#3a5fbf', '#18307a', '#08183a'],
+    [80, 120, 220], 0.45);
+  if (r > 20) {
+    ctx.save();
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.clip();
+    const rot = (body.rotationSpeed || 0.3) * globalTime;
+    const shift = ((rot % 1) * 2 - 1) * r * 0.3;
+    const spotGrad = ctx.createRadialGradient(x - r * 0.2 + shift, y - r * 0.1, 0, x - r * 0.2 + shift, y - r * 0.1, r * 0.25);
+    spotGrad.addColorStop(0, 'rgba(20, 40, 90, 0.7)');
+    spotGrad.addColorStop(1, 'rgba(20, 40, 90, 0)');
+    ctx.fillStyle = spotGrad;
+    ctx.beginPath(); ctx.ellipse(x - r * 0.2 + shift, y - r * 0.1, r * 0.25, r * 0.12, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  }
+}
+
+function drawPluto(x, y, r, body) {
+  drawPlanetSphere(x, y, r,
+    ['#f0e0c8', '#d8c0a0', '#a89070', '#604830', '#281810'],
+    [200, 180, 160], 0.08);
+  if (r > 18) {
+    ctx.save();
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.clip();
+    const rot = (body.rotationSpeed || 0.2) * globalTime;
+    const shift = ((rot % 1) * 2 - 1) * r * 0.4;
+    const heartGrad = ctx.createRadialGradient(x + shift, y, 0, x + shift, y, r * 0.4);
+    heartGrad.addColorStop(0, 'rgba(255, 250, 235, 0.7)');
+    heartGrad.addColorStop(1, 'rgba(255, 250, 235, 0)');
+    ctx.fillStyle = heartGrad;
+    ctx.beginPath(); ctx.ellipse(x + shift, y, r * 0.4, r * 0.3, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  }
+}
+
+function drawDwarf(x, y, r) {
+  drawPlanetSphere(x, y, r,
+    ['#e8dce8', '#c0b0c8', '#9088a0', '#504860', '#201828'],
+    [180, 160, 200], 0.08);
+}
+
+function drawGalilean(x, y, r) {
+  drawPlanetSphere(x, y, r,
+    ['#f0e8d8', '#d0c0a0', '#a09070', '#605040', '#282018'],
+    [200, 180, 140], 0.08);
+}
+
+function drawTitan(x, y, r, body) {
+  drawPlanetSphere(x, y, r,
+    ['#f8d090', '#e0a860', '#b07840', '#604020', '#201008'],
+    [255, 180, 80], 0.4);
+}
+
+function drawStation(x, y, r) {
+  ctx.save(); ctx.translate(x, y);
+  ctx.fillStyle = 'rgba(70, 110, 180, 0.85)';
+  ctx.fillRect(-r * 3, -r * 0.12, r * 1.4, r * 0.24);
+  ctx.fillRect(r * 1.6, -r * 0.12, r * 1.4, r * 0.24);
+  ctx.strokeStyle = 'rgba(50, 80, 140, 0.6)';
+  ctx.lineWidth = 0.5;
+  for (let i = 1; i < 5; i++) {
+    const px = -r * 3 + (r * 1.4) * (i / 5);
+    ctx.beginPath(); ctx.moveTo(px, -r * 0.12); ctx.lineTo(px, r * 0.12); ctx.stroke();
+    const px2 = r * 1.6 + (r * 1.4) * (i / 5);
+    ctx.beginPath(); ctx.moveTo(px2, -r * 0.12); ctx.lineTo(px2, r * 0.12); ctx.stroke();
+  }
+  ctx.fillStyle = 'rgba(225, 230, 235, 0.95)';
+  ctx.fillRect(-r * 1.2, -r * 0.2, r * 2.4, r * 0.4);
+  ctx.fillStyle = 'rgba(180, 190, 200, 0.9)';
+  ctx.fillRect(-r * 1.2, -r * 0.2, r * 2.4, r * 0.08);
+  ctx.fillStyle = 'rgba(200, 210, 220, 0.95)';
+  ctx.fillRect(-r * 0.15, -r * 0.8, r * 0.3, r * 1.6);
+  ctx.fillStyle = 'rgba(180, 190, 200, 0.9)';
+  ctx.beginPath(); ctx.arc(-r * 0.9, r * 0.3, r * 0.12, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(r * 0.9, r * 0.3, r * 0.12, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = 'rgba(220, 225, 230, 0.95)';
+  ctx.beginPath(); ctx.arc(0, -r * 0.85, r * 0.15, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+}
+
+function drawHubble(x, y, r) {
+  ctx.save(); ctx.translate(x, y);
+  const bodyGrad = ctx.createLinearGradient(-r * 0.25, 0, r * 0.25, 0);
+  bodyGrad.addColorStop(0, 'rgba(160, 170, 180, 0.9)');
+  bodyGrad.addColorStop(0.5, 'rgba(240, 245, 250, 0.95)');
+  bodyGrad.addColorStop(1, 'rgba(140, 150, 160, 0.9)');
+  ctx.fillStyle = bodyGrad;
+  ctx.fillRect(-r * 0.25, -r * 1.2, r * 0.5, r * 2.4);
+  ctx.fillStyle = 'rgba(60, 70, 80, 0.9)';
+  ctx.fillRect(-r * 0.3, -r * 1.25, r * 0.6, r * 0.15);
+  ctx.fillStyle = 'rgba(20, 25, 35, 0.95)';
+  ctx.beginPath(); ctx.ellipse(0, -r * 1.15, r * 0.2, r * 0.08, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = 'rgba(60, 90, 150, 0.85)';
+  ctx.fillRect(-r * 1.2, -r * 0.7, r * 0.8, r * 0.5);
+  ctx.fillRect(r * 0.4, -r * 0.7, r * 0.8, r * 0.5);
+  ctx.restore();
+}
+
+function drawStarlink(x, y, r) {
+  ctx.save(); ctx.translate(x, y);
+  const g = ctx.createLinearGradient(-r, -r * 0.4, r, r * 0.4);
+  g.addColorStop(0, 'rgba(80, 100, 140, 0.9)');
+  g.addColorStop(0.5, 'rgba(160, 180, 220, 0.9)');
+  g.addColorStop(1, 'rgba(60, 80, 120, 0.9)');
+  ctx.fillStyle = g;
+  ctx.fillRect(-r, -r * 0.3, r * 2, r * 0.6);
+  ctx.strokeStyle = 'rgba(30, 40, 70, 0.7)';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(-r, 0); ctx.lineTo(r, 0); ctx.stroke();
+  ctx.restore();
+}
+
+function drawSatellite(x, y, r) {
+  ctx.save(); ctx.translate(x, y);
+  ctx.fillStyle = 'rgba(80, 110, 160, 0.85)';
+  ctx.fillRect(-r * 1.2, -r * 0.1, r * 0.9, r * 0.2);
+  ctx.fillRect(r * 0.3, -r * 0.1, r * 0.9, r * 0.2);
+  ctx.fillStyle = 'rgba(220, 225, 230, 0.95)';
+  ctx.fillRect(-r * 0.3, -r * 0.25, r * 0.6, r * 0.5);
+  ctx.restore();
+}
+
+function drawLagrangePoint(x, y, r) {
+  ctx.strokeStyle = 'rgba(160, 200, 255, 0.5)';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([3, 3]);
+  ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = 'rgba(160, 200, 255, 0.9)';
+  ctx.beginPath(); ctx.arc(x, y, r*0.2, 0, Math.PI*2); ctx.fill();
+}
+
+function drawProbe(x, y, r) {
+  const g = ctx.createRadialGradient(x, y, 0, x, y, r*2.5);
+  g.addColorStop(0, 'rgba(200,220,255,0.95)'); g.addColorStop(1, 'rgba(200,220,255,0)');
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r*2.5, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(x, y, Math.max(1, r*0.3), 0, Math.PI*2); ctx.fill();
+}
+
+function drawStarBody(x, y, r) {
+  let g = ctx.createRadialGradient(x, y, 0, x, y, r*4);
+  g.addColorStop(0, '#fff8e0'); g.addColorStop(0.15, 'rgba(255,240,200,0.7)');
+  g.addColorStop(0.4, 'rgba(255,220,160,0.25)'); g.addColorStop(1, 'rgba(255,220,160,0)');
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r*4, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(x, y, r*0.4, 0, Math.PI*2); ctx.fill();
+}
+
+function drawSupergiant(x, y, r) {
+  let g = ctx.createRadialGradient(x, y, 0, x, y, r*5);
+  g.addColorStop(0, '#ffd0a8'); g.addColorStop(0.15, 'rgba(255,160,100,0.8)');
+  g.addColorStop(0.4, 'rgba(255,120,70,0.3)'); g.addColorStop(1, 'rgba(255,80,40,0)');
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r*5, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = 'rgba(255,240,220,0.95)'; ctx.beginPath(); ctx.arc(x, y, r*0.6, 0, Math.PI*2); ctx.fill();
+}
+
+function drawBelt(belt, km) {
+  for (const ast of belt) {
+    const objKm = ast.distance;
+    const ratio = km / objKm;
+    if (ratio < 0.3 || ratio > 1.9) continue;
+    const delta = km - objKm;
+    const absDelta = Math.abs(delta);
+    const visibility = objKm * 0.85;
+    if (absDelta > visibility) continue;
+    const proximity = 1 - absDelta / visibility;
+    const xOff = ast.xOff * W * 0.55 * (1 - proximity * 0.5);
+    const x = W / 2 + xOff;
+    const yOff = ast.yOff * H * 0.55 * (1 - proximity * 0.5);
+    const y = H / 2 + yOff + (delta / visibility) * H * 0.4;
+    if (x < -20 || x > W + 20 || y < -20 || y > H + 20) continue;
+    const size = ast.size * (1 + proximity * 2.5) * 0.8;
+    const alpha = ast.alpha * (0.3 + proximity * 0.7);
+    const rotation = ast.rot + globalTime * ast.rotSpeed;
+    ctx.beginPath();
+    const n = ast.verts.length;
+    for (let i = 0; i < n; i++) {
+      const angle = ast.verts[i] + rotation;
+      const rad = size * (0.8 + Math.sin(i * 1.7 + ast.rot) * 0.2);
+      const px = x + Math.cos(angle) * rad;
+      const py = y + Math.sin(angle) * rad;
+      if (i === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    }
+    ctx.closePath();
+    const grad = ctx.createRadialGradient(x - size * 0.3, y - size * 0.3, 0, x, y, size);
+    grad.addColorStop(0, `rgba(180, 170, 150, ${alpha})`);
+    grad.addColorStop(0.6, `rgba(120, 110, 95, ${alpha * 0.9})`);
+    grad.addColorStop(1, `rgba(60, 55, 50, ${alpha * 0.8})`);
+    ctx.fillStyle = grad;
+    ctx.fill();
+  }
+}
+
+function kmToScaleX(kmVal, x1, barW) {
+  if (kmVal < 1) kmVal = 1;
+  const log = Math.log10(kmVal);
+  const ratio = Math.min(1, Math.max(0, log / LOG_MAX));
+  return x1 + ratio * barW;
+}
+
+function drawScale() {
+  if (reviewMode) return;   // в режиме просмотра шкалу не рисуем
+  const km = Number(distance);
+  const barY = H - 46;
+  const x1 = W * 0.06;
+  const x2 = W * 0.94;
+  const barW = x2 - x1;
+
+  ctx.strokeStyle = 'rgba(140, 180, 240, 0.15)';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(x1, barY); ctx.lineTo(x2, barY); ctx.stroke();
+
+  const progressX = kmToScaleX(Math.max(km, 1), x1, barW);
+  const grad = ctx.createLinearGradient(x1, barY, progressX, barY);
+  grad.addColorStop(0, 'rgba(140, 180, 240, 0.35)');
+  grad.addColorStop(1, 'rgba(160, 210, 255, 0.75)');
+  ctx.strokeStyle = grad;
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(x1, barY); ctx.lineTo(progressX, barY); ctx.stroke();
+
+  ctx.textAlign = 'center';
+  ctx.font = '300 9px "Space Mono", monospace';
+  for (const m of SCALE_MARKS) {
+    const x = kmToScaleX(m.km, x1, barW);
+    const passed = km >= m.km;
+    ctx.fillStyle = passed ? 'rgba(180, 220, 255, 0.85)' : 'rgba(140, 180, 240, 0.35)';
+    ctx.beginPath(); ctx.arc(x, barY, passed ? 2.5 : 2, 0, Math.PI * 2); ctx.fill();
+    const yOff = m.level * 10;
+    ctx.strokeStyle = passed ? 'rgba(180, 220, 255, 0.35)' : 'rgba(140, 180, 240, 0.12)';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(x, barY); ctx.lineTo(x, barY + yOff + 3); ctx.stroke();
+    ctx.fillStyle = passed ? 'rgba(200, 225, 255, 0.7)' : 'rgba(160, 190, 230, 0.3)';
+    ctx.fillText(m.label, x, barY + yOff + 14);
+  }
+
+  ctx.shadowColor = 'rgba(160, 220, 255, 0.9)';
+  ctx.shadowBlur = 12;
+  ctx.fillStyle = '#d0e8ff';
+  ctx.beginPath(); ctx.arc(progressX, barY, 2.5, 0, Math.PI * 2); ctx.fill();
+  ctx.shadowBlur = 0;
+}
+
+/* =========================================================
+   АНИМАЦИЯ
+   ========================================================= */
+function animate(now) {
+  const dt = Math.min((now - lastFrameTime) / 1000, 0.05);
+  lastFrameTime = now;
+  globalTime += dt;
+
+  // Логика просмотра
+  if (reviewMode && reviewPlaying) {
+    reviewSliderPos += PLAY_SPEED * dt;
+    if (reviewSliderPos >= 1000) {
+      reviewSliderPos = 1000;
+      reviewPlaying = false;
+      document.getElementById('reviewPlay').textContent = '▶';
+    }
+    document.getElementById('reviewSlider').value = reviewSliderPos;
+    viewKm = sliderPosToKm(reviewSliderPos);
+    document.getElementById('reviewKmLabel').textContent = formatKmNumber(viewKm);
+    distanceEl.textContent = formatDistance(BigInt(Math.round(viewKm)));
+  }
+
+  // Основной разгон — только в обычном режиме
+  if (!reviewMode) {
+    impulse *= Math.pow(0.5, dt / IMPULSE_HALFLIFE);
+    if (impulse < 0.05) impulse = 0;
+
+    const km = Number(distance);
+    const starFactor = 0.4 + Math.min(0.6, km / 200);
+    targetSpeed = BASE_SPEED * starFactor + impulse * 0.9;
+    if (targetSpeed > MAX_SPEED) targetSpeed = MAX_SPEED;
+    starsSpeed += (targetSpeed - starsSpeed) * 0.12;
+
+    const isBoost = impulse >= BOOST_THRESHOLD;
+    if (isBoost !== boostActive) {
+      boostActive = isBoost;
+      counterEl.classList.toggle('boost', isBoost);
+    }
+  } else {
+    // В режиме просмотра — медленный дрейф звёзд
+    targetSpeed = 1.5;
+    starsSpeed += (targetSpeed - starsSpeed) * 0.05;
+    counterEl.classList.remove('boost');
+  }
+
+  ctx.fillStyle = 'rgba(0, 0, 5, 0.35)';
+  ctx.fillRect(0, 0, W, H);
+
+  const km = getCurrentKm();
+
+  drawNebulae();
+  drawStars();
+  drawSun(km);
+  drawEarth(km);
+  drawBelt(asteroidBelt, km);
+  drawBelt(kuiperBelt, km);
+  for (const body of BODIES) drawBody(body, km);
+  drawScale();
+
+  requestAnimationFrame(animate);
+}
+requestAnimationFrame((t) => { lastFrameTime = t; animate(t); });
+
+/* =========================================================
+   КЛИК
+   ========================================================= */
+function handleClick(e) {
+  if (e && e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON')) return;
+  if (reviewMode) return;   // в режиме просмотра клики не считаем
+
+  distance += 10n;
+  impulse += IMPULSE_PER_CLICK;
+  if (impulse > IMPULSE_MAX) impulse = IMPULSE_MAX;
+  hintEl.style.opacity = '0';
+  distanceEl.textContent = formatDistance(distance);
+  checkMilestones();
+  save();
+}
+document.body.addEventListener('click', handleClick);
+
+function checkMilestones() {
+  if (nextMilestone >= MILESTONES.length) return;
+  const m = MILESTONES[nextMilestone];
+  if (distance >= m.d) {
+    showMilestone(m.text);
+    nextMilestone++;
+    checkMilestones();
+  }
+}
+
+let milestoneTimer = null;
+function showMilestone(text) {
+  milestoneEl.textContent = text;
+  milestoneEl.classList.add('show');
+  clearTimeout(milestoneTimer);
+  milestoneTimer = setTimeout(() => milestoneEl.classList.remove('show'), 7000);
+}
+
+function save() {
+  try {
+    localStorage.setItem('space_distance', distance.toString());
+    localStorage.setItem('space_milestone', nextMilestone.toString());
+  } catch (e) {}
+}
+
+function load() {
+  try {
+    const d = localStorage.getItem('space_distance');
+    const m = localStorage.getItem('space_milestone');
+    if (d) distance = BigInt(d);
+    if (m) nextMilestone = parseInt(m, 10);
+    distanceEl.textContent = formatDistance(distance);
+    if (distance > 0n) hintEl.style.opacity = '0';
+  } catch (e) {}
+}
+load();
+
+/* =========================================================
+   РЕЖИМ ПРОСМОТРА
+   ========================================================= */
+const reviewBtn = document.getElementById('reviewBtn');
+const reviewPanel = document.getElementById('reviewPanel');
+const reviewPlay = document.getElementById('reviewPlay');
+const reviewSlider = document.getElementById('reviewSlider');
+const reviewClose = document.getElementById('reviewClose');
+const reviewKmLabel = document.getElementById('reviewKmLabel');
+
+function enterReview() {
+  reviewMode = true;
+  reviewPlaying = false;
+  // Максимум — что уже накликали, но не меньше 10 000 км (чтобы было что смотреть)
+  reviewMaxKm = Math.max(Number(distance), 10000);
+  reviewSliderPos = 0;
+  viewKm = 1;
+  reviewSlider.value = 0;
+  reviewPlay.textContent = '▶';
+  reviewKmLabel.textContent = formatKmNumber(1);
+  reviewPanel.classList.add('show');
+  reviewBtn.style.display = 'none';
+  distanceEl.textContent = formatDistance(BigInt(1));
+}
+
+function exitReview() {
+  reviewMode = false;
+  reviewPlaying = false;
+  reviewPanel.classList.remove('show');
+  reviewBtn.style.display = 'block';
+  distanceEl.textContent = formatDistance(distance);
+}
+
+reviewBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  enterReview();
+});
+
+reviewClose.addEventListener('click', (e) => {
+  e.stopPropagation();
+  exitReview();
+});
+
+reviewPlay.addEventListener('click', (e) => {
+  e.stopPropagation();
+  reviewPlaying = !reviewPlaying;
+  reviewPlay.textContent = reviewPlaying ? '⏸' : '▶';
+  // Если дошли до конца и нажали play — начинаем с начала
+  if (reviewPlaying && reviewSliderPos >= 1000) {
+    reviewSliderPos = 0;
+    reviewSlider.value = 0;
+    viewKm = 1;
+  }
+});
+
+reviewSlider.addEventListener('input', (e) => {
+  e.stopPropagation();
+  reviewPlaying = false;
+  reviewPlay.textContent = '▶';
+  reviewSliderPos = parseFloat(e.target.value);
+  viewKm = sliderPosToKm(reviewSliderPos);
+  reviewKmLabel.textContent = formatKmNumber(viewKm);
+  distanceEl.textContent = formatDistance(BigInt(Math.round(viewKm)));
+});
+
+reviewSlider.addEventListener('click', (e) => e.stopPropagation());
+
+/* =========================================================
+   ПОЛЕ ВВОДА (для теста)
+   ========================================================= */
+const jumpInput = document.getElementById('jumpInput');
+const jumpBtn = document.getElementById('jumpBtn');
+
+function jumpToKm(str) {
+  const clean = String(str).trim().replace(/[\s,]/g, '');
+  const km = Number(clean);
+  if (!isFinite(km) || km < 0) return;
+  distance = BigInt(Math.round(km));
+  distanceEl.textContent = formatDistance(distance);
+  while (nextMilestone < MILESTONES.length && distance >= MILESTONES[nextMilestone].d) {
+    nextMilestone++;
+  }
+  save();
+}
+
+jumpInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    jumpToKm(jumpInput.value);
+    jumpInput.blur();
+  }
+});
+jumpBtn.addEventListener('click', (e) => {
+  e.preventDefault();
+  e.stopPropagation();
+  jumpToKm(jumpInput.value);
+});
+jumpInput.addEventListener('click', (e) => e.stopPropagation());
+
+document.getElementById('donate').addEventListener('click', (e) => {
+  e.stopPropagation();
+  alert('Спасибо! Здесь будет ссылка на донат.');
+});
+</script>
+</body>
+</html>
