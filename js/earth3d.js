@@ -1,5 +1,6 @@
 /* =========================================================
    EARTH 3D — физически честный размер + жёсткий resize
+   Терминатор фиксирован (не крутится). Свет — из правого верхнего угла.
    ========================================================= */
 
 const EARTH_RADIUS_KM = 6371;
@@ -25,7 +26,7 @@ earthCamera.lookAt(0, 0, 0);
 const earthUniforms = {
   dayTexture:   { value: null },
   nightTexture: { value: null },
-  sunDirection: { value: new THREE.Vector3(5, 3, 2).normalize() },
+  sunDirection: { value: new THREE.Vector3(0.7, 0.4, 0.5).normalize() },
   hazeColor:    { value: new THREE.Color(0x6aaae8) },
   termColor:    { value: new THREE.Color(0xaad4ff) },
   termWidth:    { value: 0.15 },
@@ -106,7 +107,7 @@ earthScene.add(earthMesh);
 
 /* ---------- Облака ---------- */
 const cloudUniforms = {
-  sunDirection: { value: new THREE.Vector3(5, 3, 2).normalize() },
+  sunDirection: { value: new THREE.Vector3(0.7, 0.4, 0.5).normalize() },
   time:         { value: 0.0 },
   opacity:      { value: 0.70 }
 };
@@ -274,12 +275,8 @@ function updateEarth(km, dt) {
   cloudUniforms.sunDirection.value.copy(earthUniforms.sunDirection.value);
   cloudUniforms.time.value = globalTime;
 
-  const sunAngle = globalTime * 0.05;
-  earthUniforms.sunDirection.value.set(
-    Math.cos(sunAngle) * 0.7 + 0.3,
-    0.4,
-    Math.sin(sunAngle) * 0.7 + 0.3
-  ).normalize();
+  /* === ФИКС: Солнце фиксировано, терминатор НЕ крутится === */
+  earthUniforms.sunDirection.value.set(0.7, 0.4, 0.5).normalize();
 
   const lightsAmount = Math.min(1, Math.max(0, (km - 500) / 1000));
   earthUniforms.nightLights.value = lightsAmount;
@@ -308,7 +305,7 @@ function updateEarth(km, dt) {
 }
 
 /* =========================================================
-   ЖЁСТКИЙ РЕСАЙЗ — DPR + setTransform + 5 вызовов после load
+   ЖЁСТКИЙ РЕСАЙЗ
    ========================================================= */
 function resizeEarth() {
   const w = window.innerWidth;
