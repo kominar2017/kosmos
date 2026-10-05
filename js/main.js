@@ -1,5 +1,6 @@
 /* =========================================================
    MAIN — главный цикл анимации
+   Передаём dt в drawStars и drawParticles для FPS-независимости.
    ========================================================= */
 
 function animate(now) {
@@ -48,10 +49,10 @@ function animate(now) {
   ctx.fillRect(0, 0, W, H);
 
   drawSky(km);
-  drawSkyClouds(km);
+  drawSkyClouds(km, dt);
   drawNebulae();
-  drawStars();
-  drawParticles();
+  drawStars(dt);
+  drawParticles(dt);
   drawSun(km);
 
   updateEarth(km, dt);

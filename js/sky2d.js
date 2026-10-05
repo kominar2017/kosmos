@@ -1,6 +1,6 @@
 /* =========================================================
    SKY 2D — небо, звёзды, частицы, туманности, солнце, облака
-   ИСПРАВЛЕНО: radius не может быть отрицательным
+   ИСПРАВЛЕНО: движение звёзд и частиц зависит от dt (FPS-независимо)
    ========================================================= */
 
 /* ---------- ОБЛАКА В НЕБЕ ---------- */
@@ -32,15 +32,17 @@ function initClouds() {
   }
 }
 
-function drawSkyClouds(km) {
+function drawSkyClouds(km, dt) {
   const fade = 1 - Math.min(1, Math.max(0, (km - 130) / 50));
   if (fade <= 0.02) return;
+
+  const dtNorm = (dt || 0.016) / 0.016;
 
   ctx.save();
   ctx.globalCompositeOperation = 'screen';
 
   for (const c of skyClouds) {
-    c.x += c.speed * 0.016;
+    c.x += c.speed * 0.016 * dtNorm;
     if (c.x - c.scale * 4 > W + 300) {
       c.x = -c.scale * 4 - 300;
       c.y = Math.random() * H * 0.55 + H * 0.02;
@@ -85,12 +87,13 @@ function initParticles() {
   }
 }
 
-function drawParticles() {
+function drawParticles(dt) {
   const speedMul = 2.2 + starsSpeed * 0.9;
+  const dtNorm = (dt || 0.016) / 0.016;
 
   for (const star of particles) {
     const oldZ = star.z;
-    star.z -= speedMul;
+    star.z -= speedMul * dtNorm;
     if (star.z <= 0) {
       star.x = (Math.random() - 0.5) * W * 2.0;
       star.y = (Math.random() - 0.5) * H * 2.0;
@@ -280,17 +283,18 @@ function initStars() {
 }
 initStars();
 
-function drawStars() {
+function drawStars(dt) {
   const km = getCurrentKm();
   if (km < 160) return;
 
   const starAlpha = Math.min(0.98, (km - 160) / 80);
+  const dtNorm = (dt || 0.016) / 0.016;   /* нормализация: 1 при 60 fps */
 
   for (const star of stars) {
     const layer = LAYERS[star.layer];
     const effectiveSpeed = starsSpeed * layer.speedMul;
     const oldZ = star.z;
-    star.z -= effectiveSpeed;
+    star.z -= effectiveSpeed * dtNorm;    /* ← движение зависит от dt */
     if (star.z <= 0) {
       star.x = (Math.random() - 0.5) * W * 2.0;
       star.y = (Math.random() - 0.5) * H * 2.0;
@@ -305,7 +309,6 @@ function drawStars() {
     const pyOld = star.y * kOld + H / 2;
     if (px < -50 || px > W + 50 || py < -50 || py > H + 50) continue;
 
-    /* ИСПРАВЛЕНИЕ: size всегда >= 0.1, alpha в [0, 1] */
     const size = Math.max(0.1, (1 - star.z / 1000) * 2.4 * layer.sizeMul);
     const alpha = Math.max(0, Math.min(1, (1 - star.z / 1000) * starAlpha * layer.alphaMul));
 
@@ -330,7 +333,7 @@ function drawStars() {
 }
 
 /* =========================================================
-   ЖЁСТКИЙ РЕСАЙЗ — DPR + setTransform + 5 вызовов после load
+   ЖЁСТКИЙ РЕСАЙЗ — DPR + setTransform
    ========================================================= */
 function resize() {
   const w = window.innerWidth;
