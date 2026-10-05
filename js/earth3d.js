@@ -1,6 +1,6 @@
 /* =========================================================
-   EARTH 3D — терминатор фиксирован, Солнце справа-вверху
-   side: DoubleSide — звёзды не видны сквозь Землю.
+   EARTH 3D — терминатор фиксирован, плавное появление
+   side: DoubleSide, fadeIn 130-230 км, yPos по логарифму
    ========================================================= */
 
 const EARTH_RADIUS_KM = 6371;
@@ -242,7 +242,7 @@ texLoader.load('textures/night.jpg', (tex) => {
 }, undefined, () => console.warn('[THREE] night.jpg не найден'));
 
 /* =========================================================
-   ЛОГИКА ЗЕМЛИ
+   ЛОГИКА ЗЕМЛИ — ПЛАВНЫЙ ПЕРЕХОД
    ========================================================= */
 function updateEarth(km, dt) {
   dt = dt || 0.016;
@@ -256,7 +256,7 @@ function updateEarth(km, dt) {
 
   if (typeof orbitMode !== 'undefined' && orbitMode) return;
 
-  if (km < 100 || km > 384400) {
+  if (km < 130 || km > 384400) {
     earthCanvas.style.opacity = '0';
     return;
   }
@@ -264,8 +264,9 @@ function updateEarth(km, dt) {
   const kmSafe = Math.max(km, EARTH_RADIUS_KM * 0.01);
   let scale = (EARTH_RADIUS_KM / kmSafe) * EARTH_K;
 
-  const t = Math.min(1, km / 384400);
-  const yPos = -0.5 - t * 1.5;
+  /* === ЛОГАРИФМИЧЕСКАЯ ПОЗИЦИЯ ВНИЗУ === */
+  const tLog = Math.log10(Math.max(km, 1) + 1) / Math.log10(384400 + 1);
+  const yPos = -1.5 - tLog * 2.0;
 
   earthMesh.scale.setScalar(scale);
   earthMesh.position.set(0, yPos, 0);
@@ -279,7 +280,6 @@ function updateEarth(km, dt) {
   cloudUniforms.sunDirection.value.copy(SUN_DIR);
   cloudUniforms.time.value = globalTime;
 
-  /* === СОЛНЦЕ ФИКСИРОВАНО === */
   earthUniforms.sunDirection.value.copy(SUN_DIR);
 
   const lightsAmount = Math.min(1, Math.max(0, (km - 500) / 1000));
@@ -304,7 +304,12 @@ function updateEarth(km, dt) {
   atmoInner.visible = true;
   atmoOuter.visible = true;
 
-  earthCanvas.style.opacity = '1';
+  /* === ПЛАВНОЕ ПОЯВЛЕНИЕ И ИСЧЕЗНОВЕНИЕ === */
+  const fadeIn  = Math.min(1, (km - 130) / 100);      /* 130 → 230 км */
+  const fadeOut = Math.min(1, (384400 - km) / 400);   /* 384000 → 384400 км */
+  const visibility = Math.min(fadeIn, fadeOut);
+
+  earthCanvas.style.opacity = String(visibility);
   earthRenderer.render(earthScene, earthCamera);
 }
 

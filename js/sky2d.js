@@ -1,6 +1,6 @@
 /* =========================================================
    SKY 2D — небо, звёзды, частицы, туманности, солнце, облака
-   ИСПРАВЛЕНО: движение звёзд и частиц зависит от dt (FPS-независимо)
+   FPS-независимое движение + плавное угасание неба (80-170 км)
    ========================================================= */
 
 /* ---------- ОБЛАКА В НЕБЕ ---------- */
@@ -134,11 +134,11 @@ function drawParticles(dt) {
   }
 }
 
-/* ---------- НЕБО ---------- */
+/* ---------- НЕБО — плавное угасание 80-170 км ---------- */
 function drawSky(km) {
-  if (km > 190) return;
+  if (km > 170) return;
 
-  const tSky = Math.min(1, Math.max(0, (km - 100) / 80));
+  const tSky = Math.min(1, Math.max(0, (km - 80) / 90));
   const alpha = 1 - tSky;
   if (alpha <= 0.005) return;
 
@@ -288,13 +288,13 @@ function drawStars(dt) {
   if (km < 160) return;
 
   const starAlpha = Math.min(0.98, (km - 160) / 80);
-  const dtNorm = (dt || 0.016) / 0.016;   /* нормализация: 1 при 60 fps */
+  const dtNorm = (dt || 0.016) / 0.016;
 
   for (const star of stars) {
     const layer = LAYERS[star.layer];
     const effectiveSpeed = starsSpeed * layer.speedMul;
     const oldZ = star.z;
-    star.z -= effectiveSpeed * dtNorm;    /* ← движение зависит от dt */
+    star.z -= effectiveSpeed * dtNorm;
     if (star.z <= 0) {
       star.x = (Math.random() - 0.5) * W * 2.0;
       star.y = (Math.random() - 0.5) * H * 2.0;
