@@ -1,6 +1,7 @@
 /* =========================================================
    MAIN — главный цикл анимации
-   Все updateXxx вызываются всегда, каждая сама решает
+   Оптимизация: рендерим только видимые объекты
+   + сброс opacity для невидимых (фикс залипания планет)
    ========================================================= */
 
 function animate(now) {
@@ -56,20 +57,43 @@ function animate(now) {
   drawParticles(dt);
   drawSun(km);
 
-  /* === 3D-ОБЪЕКТЫ — вызываем ВСЕ, каждая сама решает === */
+  /* === 3D-ОБЪЕКТЫ — оптимизация + сброс opacity === */
 
-  updateEarth(km, dt);
-  updateMoon(km, dt);
-  updateMars(km, dt);
-  updateJupiter(km, dt);
-  updateSaturn(km, dt);
-  updateUranus(km, dt);
-  updateNeptune(km, dt);
-  updatePluto(km, dt);
-  updateISS(km, dt);
-  updateVoyager(km, dt);
-  updateAsteroids(km, dt);
-  updateKuiper(km, dt);
+  if (kmNum >= 100 && kmNum <= 384400) updateEarth(km, dt);
+  else earthCanvas.style.opacity = '0';
+
+  if (kmNum >= 80000 && kmNum <= 550000) updateMoon(km, dt);
+  else moonCanvas.style.opacity = '0';
+
+  if (kmNum >= 224574000 && kmNum <= 225232000) updateMars(km, dt);
+  else marsCanvas.style.opacity = '0';
+
+  if (kmNum >= 627220000 && kmNum <= 628780000) updateJupiter(km, dt);
+  else jupiterCanvas.style.opacity = '0';
+
+  if (kmNum >= 1273640000 && kmNum <= 1276360000) updateSaturn(km, dt);
+  else saturnCanvas.style.opacity = '0';
+
+  if (kmNum >= 2722100000 && kmNum <= 2723900000) updateUranus(km, dt);
+  else uranusCanvas.style.opacity = '0';
+
+  if (kmNum >= 4350115000 && kmNum <= 4351885000) updateNeptune(km, dt);
+  else neptuneCanvas.style.opacity = '0';
+
+  if (kmNum >= 5905610000 && kmNum <= 5906390000) updatePluto(km, dt);
+  else plutoCanvas.style.opacity = '0';
+
+  if (kmNum >= 385 && kmNum <= 405) updateISS(km, dt);
+  else issCanvas.style.opacity = '0';
+
+  if (kmNum >= 20000000000 && kmNum <= 28000000000) updateVoyager(km, dt);
+  else voyagerCanvas.style.opacity = '0';
+
+  if (kmNum >= 300000000 && kmNum <= 500000000) updateAsteroids(km, dt);
+  else asteroidsCanvas.style.opacity = '0';
+
+  if (kmNum >= 4500000000 && kmNum <= 8000000000) updateKuiper(km, dt);
+  else kuiperCanvas.style.opacity = '0';
 
   drawScale();
 
