@@ -1,5 +1,6 @@
 /* =========================================================
    CORE — состояние, константы, утилиты
+   INERTIA_DECAY 0.6 — плавное затухание
    ========================================================= */
 
 /* ---------- Загрузчик текстур ---------- */
@@ -7,6 +8,7 @@ const texLoader = new THREE.TextureLoader();
 
 /* ---------- Состояние ---------- */
 let distance = 0n;
+let maxReachedKm = 0;
 let nextMilestone = 0;
 let starsSpeed = 0;
 let lastClickTime = 0;
@@ -30,11 +32,11 @@ const CLICK_ENERGY_THRESHOLD = 0.6;
 
 /* ---------- Инерция звёзд ---------- */
 let inertiaSpeed = 0;
-const INERTIA_DECAY = 0.9;
+const INERTIA_DECAY = 0.6;
 const MAX_STARS_SPEED = 14;
 const MIN_STARS_SPEED = 0.3;
 
-/* ---------- Канвасы ---------- */
+/* ---------- Канвасы и размеры ---------- */
 const canvas = document.getElementById('space');
 const ctx = canvas.getContext('2d', { alpha: false });
 const uiCanvas = document.getElementById('ui-canvas');
@@ -186,8 +188,26 @@ function projectSphere(lonDeg, latDeg, cx, cy, r) {
   return { x: cx + r * sinLon * cosLat, y: cy - r * sinLat, depth: cosLon };
 }
 
+/* ---------- Прогресс / разблокировка обзора ---------- */
+function updateMaxReached(km) {
+  const k = Number(km);
+  if (!isFinite(k) || k <= maxReachedKm) return;
+  maxReachedKm = k;
+  try {
+    localStorage.setItem('space_max_reached', String(Math.round(maxReachedKm)));
+  } catch (e) {}
+}
+
+function loadMaxReached() {
+  try {
+    const v = localStorage.getItem('space_max_reached');
+    if (v) maxReachedKm = Number(v) || 0;
+  } catch (e) {}
+}
+loadMaxReached();
+
 /* =========================================================
-   REVIEW TIMELINE — с Вояджером
+   REVIEW TIMELINE
    ========================================================= */
 const REVIEW_TIMELINE = [
   { km: 0,          key: 'rv_start' },
@@ -261,8 +281,6 @@ const REVIEW_TIMELINE = [
   { km: 5906100000, key: 'rv_plutoPeak' },
   { km: 5906250000, key: 'rv_plutoPeak' },
   { km: 5906390000, key: 'rv_plutoPeak' },
-
-  /* --- ВОЯДЖЕР --- */
   { km: 8000000000,   key: 'rv_interplanet' },
   { km: 15000000000,  key: 'rv_interplanet' },
   { km: 20000000000,  key: 'rv_voyager' },

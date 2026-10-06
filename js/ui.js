@@ -1,5 +1,6 @@
 /* =========================================================
    UI — счётчик, шкала, milestone, клик, donate
+   Улучшенная механика клика: импульс 2.5, комбо ×2
    ========================================================= */
 
 function drawScale() {
@@ -97,6 +98,11 @@ function load() {
     if (d) distance = BigInt(d);
     if (m) nextMilestone = parseInt(m, 10);
     distanceEl.textContent = formatDistance(distance);
+
+    if (Number(distance) > maxReachedKm) {
+      maxReachedKm = Number(distance);
+      try { localStorage.setItem('space_max_reached', String(Math.round(maxReachedKm))); } catch (e) {}
+    }
   } catch (e) {}
 }
 load();
@@ -108,26 +114,31 @@ function handleClick(e) {
   if (reviewMode) return;
   if (typeof orbitMode !== 'undefined' && orbitMode) return;
 
+  /* === 1 КЛИК = 1 КМ В СЧЁТЧИКЕ === */
   distance += 1n;
+  updateMaxReached(distance);
 
   const now = performance.now();
   const dtClick = (now - lastClickTime) / 1000;
 
+  /* --- Подсветка счётчика (clickEnergy) --- */
   let energyMul = 1.0;
-  if (dtClick < 0.08)      energyMul = 3.5;
-  else if (dtClick < 0.15) energyMul = 2.5;
-  else if (dtClick < 0.3)  energyMul = 1.7;
-  else if (dtClick < 0.6)  energyMul = 1.2;
+  if (dtClick < 0.08)      energyMul = 3.5;   /* молниеносно */
+  else if (dtClick < 0.15) energyMul = 2.5;   /* очень быстро */
+  else if (dtClick < 0.3)  energyMul = 1.7;   /* быстро */
+  else if (dtClick < 0.6)  energyMul = 1.2;   /* обычно */
 
   clickEnergy = Math.min(1, clickEnergy + CLICK_ENERGY_PER_CLICK * energyMul);
 
+  /* --- Импульс звёзд (inertiaSpeed) --- */
   let impulseMul = 1.0;
-  if (dtClick < 0.08)      impulseMul = 2.0;
-  else if (dtClick < 0.15) impulseMul = 1.6;
-  else if (dtClick < 0.3)  impulseMul = 1.3;
+  if (dtClick < 0.08)      impulseMul = 2.0;   /* ×2 */
+  else if (dtClick < 0.15) impulseMul = 1.6;   /* ×1.6 */
+  else if (dtClick < 0.3)  impulseMul = 1.3;   /* ×1.3 */
 
-  inertiaSpeed = Math.min(MAX_STARS_SPEED, inertiaSpeed + 1.5 * impulseMul);
+  inertiaSpeed = Math.min(MAX_STARS_SPEED, inertiaSpeed + 2.5 * impulseMul);
 
+  /* --- Вспышка (мгновенный отклик) --- */
   clickFlash = 1.0;
   lastClickTime = now;
 
