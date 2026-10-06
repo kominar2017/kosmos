@@ -1,5 +1,7 @@
 /* =========================================================
-   ISS 3D — МКС. Pixel Ratio 1.5
+   ISS 3D — МКС.
+   Баланс: качество + FPS.
+   pixelRatio 1.5, antialias on, anisotropy 4
    ========================================================= */
 
 const ISS_APPEAR_KM = 385;
@@ -7,8 +9,12 @@ const ISS_PEAK_KM   = 398;
 const ISS_VANISH_KM = 405;
 
 const issCanvas = document.getElementById('iss3d');
-const issRenderer = new THREE.WebGLRenderer({ canvas: issCanvas, alpha: true, antialias: true });
-issRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+const issRenderer = new THREE.WebGLRenderer({
+  canvas: issCanvas,
+  alpha: true,
+  antialias: true               /* ← вернули для качества краёв */
+});
+issRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));   /* ← вернули 1.5 */
 issRenderer.setClearColor(0x000000, 0);
 issRenderer.outputEncoding = THREE.sRGBEncoding;
 
@@ -64,20 +70,26 @@ issLoader.load('models/iss.glb', (gltf) => {
   const box = new THREE.Box3().setFromObject(issMesh);
   const size = box.getSize(new THREE.Vector3());
   const maxDim = Math.max(size.x, size.y, size.z);
-  const targetSize = 100;
+  const targetSize = 80;            /* компромисс: было 100 → 60 (мыло) → 80 */
   issMesh.scale.setScalar(targetSize / maxDim);
 
   issMesh.traverse((node) => {
     if (node.isMesh && node.material) {
-      node.material.roughness = 0.5;
-      node.material.metalness = 0.3;
+      /* Клонируем материал, чтобы не мутировать shared */
+      node.material = node.material.clone();
+
+      node.material.roughness = 0.7;
+      node.material.metalness = 0.2;
+
+      /* Упрощаем emissive — оставляем лёгкое свечение */
+      node.material.emissive = new THREE.Color(0x1a1a2a);
+      node.material.emissiveIntensity = 0.15;
+
       if (node.material.map) {
-        node.material.map.anisotropy = issRenderer.capabilities.getMaxAnisotropy();
+        node.material.map.anisotropy = 4;   /* ← было 16 (жрёт GPU), ставим 4 — компромисс */
         node.material.map.minFilter = THREE.LinearMipmapLinearFilter;
         node.material.map.magFilter = THREE.LinearFilter;
       }
-      node.material.emissive = new THREE.Color(0x223344);
-      node.material.emissiveIntensity = 0.2;
     }
   });
 
@@ -97,7 +109,7 @@ issLoader.load('models/iss.glb', (gltf) => {
 function resizeISS() {
   const w = window.innerWidth;
   const h = window.innerHeight;
-  const dpr = Math.min(window.devicePixelRatio, 1.5);
+  const dpr = Math.min(window.devicePixelRatio, 1.5);   /* ← вернули 1.5 */
   issRenderer.setPixelRatio(dpr);
   issRenderer.setSize(w, h, false);
   issCamera.aspect = w / h;
@@ -106,6 +118,7 @@ function resizeISS() {
 resizeISS();
 window.addEventListener('resize', resizeISS);
 window.addEventListener('load', resizeISS);
+window.addEventListener('orientationchange', resizeISS);
 
 function updateISS(km, dt) {
   dt = dt || 0.016;
@@ -127,7 +140,8 @@ function updateISS(km, dt) {
   issMesh.position.set(pos.x, pos.y, pos.z);
 
   issMesh.rotation.y += 0.0015 * (dt / 0.016);
-  issMesh.rotation.x = Math.sin(globalTime * 0.5) * 0.08;
+  const tGlobal = (typeof globalTime === 'number') ? globalTime : 0;
+  issMesh.rotation.x = Math.sin(tGlobal * 0.5) * 0.08;
   issMesh.rotation.z = 0.05;
 
   let opacity = 1;
