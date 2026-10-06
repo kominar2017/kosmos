@@ -1,5 +1,6 @@
 /* =========================================================
    SATURN 3D — Сатурн с кольцами + Титан с текстурой
+   Pixel Ratio 1.5, сфера 64×64
    ========================================================= */
 
 const SATURN_RADIUS_KM   = 58232;
@@ -12,7 +13,7 @@ const SATURN_VANISH_KM = 1276360000;
 
 const saturnCanvas = document.getElementById('saturn3d');
 const saturnRenderer = new THREE.WebGLRenderer({ canvas: saturnCanvas, alpha: true, antialias: true });
-saturnRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 3));
+saturnRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
 saturnRenderer.setClearColor(0x000000, 0);
 saturnRenderer.outputEncoding = THREE.sRGBEncoding;
 saturnRenderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -69,14 +70,13 @@ const saturnMat = new THREE.ShaderMaterial({
 const saturnGroup = new THREE.Group();
 saturnScene.add(saturnGroup);
 
-const saturnMesh = new THREE.Mesh(new THREE.SphereGeometry(1, 96, 96), saturnMat);
+const saturnMesh = new THREE.Mesh(new THREE.SphereGeometry(1, 64, 64), saturnMat);
 saturnGroup.add(saturnMesh);
 
-/* ---------- КОЛЬЦА ---------- */
 const RING_INNER = 1.2;
 const RING_OUTER = 2.4;
 
-const ringGeo = new THREE.RingGeometry(RING_INNER, RING_OUTER, 128);
+const ringGeo = new THREE.RingGeometry(RING_INNER, RING_OUTER, 96);
 
 const ringPos = ringGeo.attributes.position;
 const ringUv = ringGeo.attributes.uv;
@@ -99,9 +99,8 @@ ringGroup.add(ringMesh);
 ringGroup.rotation.x = Math.PI / 2;
 saturnGroup.add(ringGroup);
 
-/* ---------- ТИТАН с текстурой ---------- */
 const titanMat = new THREE.MeshStandardMaterial({
-  color: 0xffaa55,        /* fallback — оранжевый, если текстура не загрузится */
+  color: 0xffaa55,
   roughness: 0.95,
   metalness: 0.05,
   emissive: 0x000000,
@@ -109,7 +108,7 @@ const titanMat = new THREE.MeshStandardMaterial({
   map: null
 });
 
-const titanMesh = new THREE.Mesh(new THREE.SphereGeometry(1, 48, 48), titanMat);
+const titanMesh = new THREE.Mesh(new THREE.SphereGeometry(1, 32, 32), titanMat);
 saturnScene.add(titanMesh);
 
 texLoader.load('textures/titan.jpg', (tex) => {
@@ -122,9 +121,8 @@ texLoader.load('textures/titan.jpg', (tex) => {
   titanMat.color.set(0xffffff);
   titanMat.needsUpdate = true;
   console.log('[THREE] Титан загружен');
-}, undefined, () => console.warn('[THREE] titan.jpg не найден — используется цвет'));
+}, undefined, () => console.warn('[THREE] titan.jpg не найден'));
 
-/* Ореол Сатурна */
 const saturnHaloMat = new THREE.ShaderMaterial({
   uniforms: { color: { value: new THREE.Color(0xffe8b0) }, intensity: { value: 0.25 } },
   vertexShader: `
@@ -148,7 +146,7 @@ const saturnHaloMat = new THREE.ShaderMaterial({
   transparent: true, blending: THREE.AdditiveBlending, side: THREE.BackSide, depthWrite: false
 });
 
-const saturnHalo = new THREE.Mesh(new THREE.SphereGeometry(1.06, 64, 64), saturnHaloMat);
+const saturnHalo = new THREE.Mesh(new THREE.SphereGeometry(1.06, 32, 32), saturnHaloMat);
 saturnGroup.add(saturnHalo);
 
 saturnScene.add(new THREE.AmbientLight(0x3a2e1e, 0.4));
@@ -179,6 +177,8 @@ texLoader.load('textures/saturn_ring.png', (tex) => {
 
 function resizeSaturn() {
   const w = window.innerWidth, h = window.innerHeight;
+  const dpr = Math.min(window.devicePixelRatio, 1.5);
+  saturnRenderer.setPixelRatio(dpr);
   saturnRenderer.setSize(w, h, false);
   saturnCamera.aspect = w / h;
   saturnCamera.updateProjectionMatrix();
@@ -227,7 +227,6 @@ function updateSaturn(km, dt) {
   ringMesh.rotation.z += 0.0018 * (dt / 0.016);
   ringMat.opacity = 0.92 + Math.sin(globalTime * 0.8) * 0.08;
 
-  /* Титан — на орбите снаружи колец, с текстурой */
   const titanAngle = globalTime * 0.15;
   const titanOrbit = scale * 4.5;
   titanMesh.position.set(

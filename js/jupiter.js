@@ -1,6 +1,6 @@
 /* =========================================================
    JUPITER 3D — Юпитер + 4 галилеевых луны с текстурами
-   Как у Марса: прозрачный фон, fade, звёзды вокруг.
+   Pixel Ratio 1.5, сфера 64×64
    ========================================================= */
 
 const JUPITER_RADIUS_KM   = 69911;
@@ -13,7 +13,7 @@ const JUPITER_VANISH_KM = 628780000;
 
 const jupiterCanvas = document.getElementById('jupiter3d');
 const jupiterRenderer = new THREE.WebGLRenderer({ canvas: jupiterCanvas, alpha: true, antialias: true });
-jupiterRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 3));
+jupiterRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
 jupiterRenderer.setClearColor(0x000000, 0);
 jupiterRenderer.outputEncoding = THREE.sRGBEncoding;
 jupiterRenderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -67,10 +67,9 @@ const jupiterMat = new THREE.ShaderMaterial({
   `
 });
 
-const jupiterMesh = new THREE.Mesh(new THREE.SphereGeometry(1, 96, 96), jupiterMat);
+const jupiterMesh = new THREE.Mesh(new THREE.SphereGeometry(1, 64, 64), jupiterMat);
 jupiterScene.add(jupiterMesh);
 
-/* ---------- ГАЛИЛЕЕВЫ ЛУНЫ с текстурами ---------- */
 const GALILEAN_MOONS = [
   { name: 'Ио',      size: 0.08, orbit: 1.6, speed: 0.25, color: 0xffcc44, texture: 'io.jpg',       angle: 0.0 },
   { name: 'Европа',  size: 0.07, orbit: 2.1, speed: 0.18, color: 0xe8f0ff, texture: 'europa.jpg',   angle: 1.5 },
@@ -81,7 +80,7 @@ const GALILEAN_MOONS = [
 const galileanMeshes = [];
 
 GALILEAN_MOONS.forEach((m) => {
-  const geo = new THREE.SphereGeometry(1, 32, 32);
+  const geo = new THREE.SphereGeometry(1, 24, 24);
   const mat = new THREE.MeshStandardMaterial({
     color: m.color,
     roughness: 0.9,
@@ -109,7 +108,6 @@ GALILEAN_MOONS.forEach((m) => {
   galileanMeshes.push({ mesh, moon: m, angle: m.angle });
 });
 
-/* Ореол Юпитера */
 const jupiterHaloMat = new THREE.ShaderMaterial({
   uniforms: { color: { value: new THREE.Color(0xffd0a0) }, intensity: { value: 0.3 } },
   vertexShader: `
@@ -133,7 +131,7 @@ const jupiterHaloMat = new THREE.ShaderMaterial({
   transparent: true, blending: THREE.AdditiveBlending, side: THREE.BackSide, depthWrite: false
 });
 
-const jupiterHalo = new THREE.Mesh(new THREE.SphereGeometry(1.06, 64, 64), jupiterHaloMat);
+const jupiterHalo = new THREE.Mesh(new THREE.SphereGeometry(1.06, 32, 32), jupiterHaloMat);
 jupiterScene.add(jupiterHalo);
 
 jupiterScene.add(new THREE.AmbientLight(0x3a2a1a, 0.4));
@@ -153,6 +151,8 @@ texLoader.load('textures/jupiter.jpg', (tex) => {
 
 function resizeJupiter() {
   const w = window.innerWidth, h = window.innerHeight;
+  const dpr = Math.min(window.devicePixelRatio, 1.5);
+  jupiterRenderer.setPixelRatio(dpr);
   jupiterRenderer.setSize(w, h, false);
   jupiterCamera.aspect = w / h;
   jupiterCamera.updateProjectionMatrix();

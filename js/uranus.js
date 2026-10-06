@@ -1,5 +1,6 @@
 /* =========================================================
    URANUS 3D — Уран с кольцами + Титания и Оберон
+   Pixel Ratio 1.5, сфера 48×48
    ========================================================= */
 
 const URANUS_RADIUS_KM   = 25362;
@@ -12,7 +13,7 @@ const URANUS_VANISH_KM = 2723900000;
 
 const uranusCanvas = document.getElementById('uranus3d');
 const uranusRenderer = new THREE.WebGLRenderer({ canvas: uranusCanvas, alpha: true, antialias: true });
-uranusRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 3));
+uranusRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
 uranusRenderer.setClearColor(0x000000, 0);
 uranusRenderer.outputEncoding = THREE.sRGBEncoding;
 uranusRenderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -36,7 +37,6 @@ const uranusUniforms = {
 
 const uranusMat = new THREE.ShaderMaterial({
   uniforms: uranusUniforms,
-  side: THREE.DoubleSide,
   vertexShader: `
     varying vec2 vUv; varying vec3 vNormal; varying vec3 vViewDir; varying vec3 vWorldPos;
     void main() {
@@ -70,13 +70,13 @@ const uranusMat = new THREE.ShaderMaterial({
 const uranusGroup = new THREE.Group();
 uranusScene.add(uranusGroup);
 
-const uranusMesh = new THREE.Mesh(new THREE.SphereGeometry(1, 96, 96), uranusMat);
+const uranusMesh = new THREE.Mesh(new THREE.SphereGeometry(1, 48, 48), uranusMat);
 uranusGroup.add(uranusMesh);
 
 const URANUS_RING_INNER = 1.5;
 const URANUS_RING_OUTER = 2.1;
 
-const uRingGeo = new THREE.RingGeometry(URANUS_RING_INNER, URANUS_RING_OUTER, 128);
+const uRingGeo = new THREE.RingGeometry(URANUS_RING_INNER, URANUS_RING_OUTER, 96);
 
 const uRingPos = uRingGeo.attributes.position;
 const uRingUv = uRingGeo.attributes.uv;
@@ -102,8 +102,8 @@ uranusGroup.add(uRingGroup);
 const titaniaMat = new THREE.MeshStandardMaterial({ color: 0x9a8a80, roughness: 0.95, metalness: 0.05 });
 const oberonMat = new THREE.MeshStandardMaterial({ color: 0x6a5a50, roughness: 0.95, metalness: 0.05 });
 
-const titaniaMesh = new THREE.Mesh(new THREE.SphereGeometry(1, 24, 24), titaniaMat);
-const oberonMesh = new THREE.Mesh(new THREE.SphereGeometry(1, 24, 24), oberonMat);
+const titaniaMesh = new THREE.Mesh(new THREE.SphereGeometry(1, 16, 16), titaniaMat);
+const oberonMesh = new THREE.Mesh(new THREE.SphereGeometry(1, 16, 16), oberonMat);
 
 uranusScene.add(titaniaMesh);
 uranusScene.add(oberonMesh);
@@ -131,7 +131,7 @@ const uranusHaloMat = new THREE.ShaderMaterial({
   transparent: true, blending: THREE.AdditiveBlending, side: THREE.BackSide, depthWrite: false
 });
 
-const uranusHalo = new THREE.Mesh(new THREE.SphereGeometry(1.06, 64, 64), uranusHaloMat);
+const uranusHalo = new THREE.Mesh(new THREE.SphereGeometry(1.06, 32, 32), uranusHaloMat);
 uranusGroup.add(uranusHalo);
 
 uranusScene.add(new THREE.AmbientLight(0x1a2a3a, 0.4));
@@ -151,6 +151,8 @@ texLoader.load('textures/uranus.jpg', (tex) => {
 
 function resizeUranus() {
   const w = window.innerWidth, h = window.innerHeight;
+  const dpr = Math.min(window.devicePixelRatio, 1.5);
+  uranusRenderer.setPixelRatio(dpr);
   uranusRenderer.setSize(w, h, false);
   uranusCamera.aspect = w / h;
   uranusCamera.updateProjectionMatrix();

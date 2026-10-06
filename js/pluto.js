@@ -1,5 +1,6 @@
 /* =========================================================
    PLUTO 3D — Плутон + Харон
+   Pixel Ratio 1.5, сфера 48×48
    ========================================================= */
 
 const PLUTO_RADIUS_KM   = 1188;
@@ -12,7 +13,7 @@ const PLUTO_VANISH_KM = 5906390000;
 
 const plutoCanvas = document.getElementById('pluto3d');
 const plutoRenderer = new THREE.WebGLRenderer({ canvas: plutoCanvas, alpha: true, antialias: true });
-plutoRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 3));
+plutoRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
 plutoRenderer.setClearColor(0x000000, 0);
 plutoRenderer.outputEncoding = THREE.sRGBEncoding;
 plutoRenderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -36,7 +37,6 @@ const plutoUniforms = {
 
 const plutoMat = new THREE.ShaderMaterial({
   uniforms: plutoUniforms,
-  side: THREE.DoubleSide,
   vertexShader: `
     varying vec2 vUv; varying vec3 vNormal; varying vec3 vViewDir; varying vec3 vWorldPos;
     void main() {
@@ -70,11 +70,11 @@ const plutoMat = new THREE.ShaderMaterial({
 const plutoGroup = new THREE.Group();
 plutoScene.add(plutoGroup);
 
-const plutoMesh = new THREE.Mesh(new THREE.SphereGeometry(1, 96, 96), plutoMat);
+const plutoMesh = new THREE.Mesh(new THREE.SphereGeometry(1, 48, 48), plutoMat);
 plutoGroup.add(plutoMesh);
 
 const charonMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9, metalness: 0.05, map: null });
-const charonMesh = new THREE.Mesh(new THREE.SphereGeometry(1, 48, 48), charonMat);
+const charonMesh = new THREE.Mesh(new THREE.SphereGeometry(1, 32, 32), charonMat);
 plutoScene.add(charonMesh);
 
 const plutoHaloMat = new THREE.ShaderMaterial({
@@ -100,7 +100,7 @@ const plutoHaloMat = new THREE.ShaderMaterial({
   transparent: true, blending: THREE.AdditiveBlending, side: THREE.BackSide, depthWrite: false
 });
 
-const plutoHalo = new THREE.Mesh(new THREE.SphereGeometry(1.06, 64, 64), plutoHaloMat);
+const plutoHalo = new THREE.Mesh(new THREE.SphereGeometry(1.06, 32, 32), plutoHaloMat);
 plutoGroup.add(plutoHalo);
 
 plutoScene.add(new THREE.AmbientLight(0x3a2a1a, 0.4));
@@ -132,6 +132,8 @@ texLoader.load('textures/charon.jfif', (tex) => {
 
 function resizePluto() {
   const w = window.innerWidth, h = window.innerHeight;
+  const dpr = Math.min(window.devicePixelRatio, 1.5);
+  plutoRenderer.setPixelRatio(dpr);
   plutoRenderer.setSize(w, h, false);
   plutoCamera.aspect = w / h;
   plutoCamera.updateProjectionMatrix();

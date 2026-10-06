@@ -1,5 +1,6 @@
 /* =========================================================
    MARS 3D — Марс + Фобос и Деймос
+   Pixel Ratio 1.5, сфера 64×64
    ========================================================= */
 
 const MARS_RADIUS_KM   = 3389.5;
@@ -12,7 +13,7 @@ const MARS_VANISH_KM = 225232000;
 
 const marsCanvas = document.getElementById('mars3d');
 const marsRenderer = new THREE.WebGLRenderer({ canvas: marsCanvas, alpha: true, antialias: true });
-marsRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 3));
+marsRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
 marsRenderer.setClearColor(0x000000, 0);
 marsRenderer.outputEncoding = THREE.sRGBEncoding;
 marsRenderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -67,7 +68,7 @@ const marsMat = new THREE.ShaderMaterial({
   `
 });
 
-const marsMesh = new THREE.Mesh(new THREE.SphereGeometry(1, 96, 96), marsMat);
+const marsMesh = new THREE.Mesh(new THREE.SphereGeometry(1, 64, 64), marsMat);
 marsScene.add(marsMesh);
 
 const phobosMat = new THREE.MeshStandardMaterial({ color: 0x5a4a3a, roughness: 0.95, metalness: 0.05 });
@@ -106,7 +107,7 @@ const marsHaloMat = new THREE.ShaderMaterial({
   transparent: true, blending: THREE.AdditiveBlending, side: THREE.BackSide, depthWrite: false
 });
 
-const marsHalo = new THREE.Mesh(new THREE.SphereGeometry(1.06, 64, 64), marsHaloMat);
+const marsHalo = new THREE.Mesh(new THREE.SphereGeometry(1.06, 32, 32), marsHaloMat);
 marsScene.add(marsHalo);
 
 texLoader.load('textures/mars.jpg', (tex) => {
@@ -121,6 +122,8 @@ texLoader.load('textures/mars.jpg', (tex) => {
 
 function resizeMars() {
   const w = window.innerWidth, h = window.innerHeight;
+  const dpr = Math.min(window.devicePixelRatio, 1.5);
+  marsRenderer.setPixelRatio(dpr);
   marsRenderer.setSize(w, h, false);
   marsCamera.aspect = w / h;
   marsCamera.updateProjectionMatrix();

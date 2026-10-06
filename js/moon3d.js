@@ -1,6 +1,5 @@
 /* =========================================================
-   MOON 3D — Луна, вращение ускорено (0.00025)
-   side: DoubleSide, без покачивания
+   MOON 3D — Луна, вращение 0.00025, Pixel Ratio 1.5
    ========================================================= */
 
 const MOON_RADIUS_KM = 1737;
@@ -9,7 +8,7 @@ const MOON_K = 3.2;
 
 const moonCanvas = document.getElementById('moon3d');
 const moonRenderer = new THREE.WebGLRenderer({ canvas: moonCanvas, alpha: true, antialias: true });
-moonRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 3));
+moonRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));   /* ← 1.5 */
 moonRenderer.setClearColor(0x000000, 0);
 moonRenderer.outputEncoding = THREE.sRGBEncoding;
 moonRenderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -84,7 +83,7 @@ const moonMat = new THREE.ShaderMaterial({
   `
 });
 
-const moonMesh = new THREE.Mesh(new THREE.SphereGeometry(1, 96, 96), moonMat);
+const moonMesh = new THREE.Mesh(new THREE.SphereGeometry(1, 64, 64), moonMat);   /* 64×64 */
 moonScene.add(moonMesh);
 
 const moonHaloMat = new THREE.ShaderMaterial({
@@ -119,7 +118,7 @@ const moonHaloMat = new THREE.ShaderMaterial({
   depthWrite: false
 });
 
-const moonHalo = new THREE.Mesh(new THREE.SphereGeometry(1.06, 64, 64), moonHaloMat);
+const moonHalo = new THREE.Mesh(new THREE.SphereGeometry(1.06, 32, 32), moonHaloMat);
 moonScene.add(moonHalo);
 
 const moonAmbient = new THREE.AmbientLight(0x2a3a5a, 0.15);
@@ -138,6 +137,8 @@ texLoader.load('textures/moon.jpg', (tex) => {
 function resizeMoon() {
   const w = window.innerWidth;
   const h = window.innerHeight;
+  const dpr = Math.min(window.devicePixelRatio, 1.5);
+  moonRenderer.setPixelRatio(dpr);
   moonRenderer.setSize(w, h, false);
   moonCamera.aspect = w / h;
   moonCamera.updateProjectionMatrix();
@@ -145,9 +146,6 @@ function resizeMoon() {
 resizeMoon();
 window.addEventListener('resize', resizeMoon);
 
-/* =========================================================
-   ЛОГИКА ЛУНЫ
-   ========================================================= */
 function updateMoon(km, dt) {
   dt = dt || 0.016;
 
@@ -159,13 +157,6 @@ function updateMoon(km, dt) {
   if (km < appearKm || km > vanishKm) {
     moonCanvas.style.opacity = '0';
     return;
-  }
-
-  let progress;
-  if (km < 384400) {
-    progress = (km - appearKm) / (384400 - appearKm) * 0.5;
-  } else {
-    progress = 0.5 + (km - 384400) / (vanishKm - 384400) * 0.5;
   }
 
   const fadeIn  = Math.min(1, (km - appearKm) / 30000);
@@ -204,7 +195,7 @@ function updateMoon(km, dt) {
   moonMesh.position.set(xPos, yPos, 0);
   moonMesh.scale.setScalar(scale);
 
-  /* === ВРАЩЕНИЕ (ускорено: 0.00025) === */
+  /* Вращение 0.00025 (ускорено) */
   moonMesh.rotation.y += 0.00025 * (dt / 0.016);
   moonMesh.rotation.z = 0.02;
 

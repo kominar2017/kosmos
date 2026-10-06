@@ -1,5 +1,6 @@
 /* =========================================================
    NEPTUNE 3D — Нептун с кольцами + Тритон
+   Pixel Ratio 1.5, сфера 48×48
    ========================================================= */
 
 const NEPTUNE_RADIUS_KM   = 24622;
@@ -12,7 +13,7 @@ const NEPTUNE_VANISH_KM = 4351885000;
 
 const neptuneCanvas = document.getElementById('neptune3d');
 const neptuneRenderer = new THREE.WebGLRenderer({ canvas: neptuneCanvas, alpha: true, antialias: true });
-neptuneRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 3));
+neptuneRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
 neptuneRenderer.setClearColor(0x000000, 0);
 neptuneRenderer.outputEncoding = THREE.sRGBEncoding;
 neptuneRenderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -36,7 +37,6 @@ const neptuneUniforms = {
 
 const neptuneMat = new THREE.ShaderMaterial({
   uniforms: neptuneUniforms,
-  side: THREE.DoubleSide,
   vertexShader: `
     varying vec2 vUv; varying vec3 vNormal; varying vec3 vViewDir; varying vec3 vWorldPos;
     void main() {
@@ -70,13 +70,13 @@ const neptuneMat = new THREE.ShaderMaterial({
 const neptuneGroup = new THREE.Group();
 neptuneScene.add(neptuneGroup);
 
-const neptuneMesh = new THREE.Mesh(new THREE.SphereGeometry(1, 96, 96), neptuneMat);
+const neptuneMesh = new THREE.Mesh(new THREE.SphereGeometry(1, 48, 48), neptuneMat);
 neptuneGroup.add(neptuneMesh);
 
 const NEPTUNE_RING_INNER = 1.7;
 const NEPTUNE_RING_OUTER = 2.4;
 
-const nRingGeo = new THREE.RingGeometry(NEPTUNE_RING_INNER, NEPTUNE_RING_OUTER, 128);
+const nRingGeo = new THREE.RingGeometry(NEPTUNE_RING_INNER, NEPTUNE_RING_OUTER, 96);
 
 const nRingPos = nRingGeo.attributes.position;
 const nRingUv = nRingGeo.attributes.uv;
@@ -100,7 +100,7 @@ nRingGroup.rotation.x = Math.PI / 2;
 neptuneGroup.add(nRingGroup);
 
 const tritonMat = new THREE.MeshStandardMaterial({ color: 0xb8b0a8, roughness: 0.9, metalness: 0.05 });
-const tritonMesh = new THREE.Mesh(new THREE.SphereGeometry(1, 32, 32), tritonMat);
+const tritonMesh = new THREE.Mesh(new THREE.SphereGeometry(1, 24, 24), tritonMat);
 neptuneScene.add(tritonMesh);
 
 const neptuneHaloMat = new THREE.ShaderMaterial({
@@ -126,7 +126,7 @@ const neptuneHaloMat = new THREE.ShaderMaterial({
   transparent: true, blending: THREE.AdditiveBlending, side: THREE.BackSide, depthWrite: false
 });
 
-const neptuneHalo = new THREE.Mesh(new THREE.SphereGeometry(1.06, 64, 64), neptuneHaloMat);
+const neptuneHalo = new THREE.Mesh(new THREE.SphereGeometry(1.06, 32, 32), neptuneHaloMat);
 neptuneGroup.add(neptuneHalo);
 
 neptuneScene.add(new THREE.AmbientLight(0x0a1a3a, 0.5));
@@ -146,6 +146,8 @@ texLoader.load('textures/neptune.jpg', (tex) => {
 
 function resizeNeptune() {
   const w = window.innerWidth, h = window.innerHeight;
+  const dpr = Math.min(window.devicePixelRatio, 1.5);
+  neptuneRenderer.setPixelRatio(dpr);
   neptuneRenderer.setSize(w, h, false);
   neptuneCamera.aspect = w / h;
   neptuneCamera.updateProjectionMatrix();

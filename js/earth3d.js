@@ -1,6 +1,6 @@
 /* =========================================================
    EARTH 3D — терминатор фиксирован, Солнце справа-вверху
-   side: DoubleSide — звёзды не видны сквозь Землю.
+   side: DoubleSide, Pixel Ratio 1.5, сфера 96×96
    ========================================================= */
 
 const EARTH_RADIUS_KM = 6371;
@@ -8,6 +8,7 @@ const EARTH_K = 3.2;
 
 const earthCanvas = document.getElementById('earth3d');
 const earthRenderer = new THREE.WebGLRenderer({ canvas: earthCanvas, alpha: true, antialias: true });
+earthRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));   /* ← 1.5 */
 earthRenderer.setClearColor(0x000000, 0);
 earthRenderer.outputEncoding = THREE.sRGBEncoding;
 earthRenderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -23,7 +24,6 @@ const earthCamera = new THREE.PerspectiveCamera(
 earthCamera.position.set(0, 0, 3.2);
 earthCamera.lookAt(0, 0, 0);
 
-/* === ЕДИНОЕ НАПРАВЛЕНИЕ СОЛНЦА === */
 const SUN_DIR = new THREE.Vector3(0.95, 0.45, 0.1).normalize();
 
 const earthUniforms = {
@@ -106,10 +106,9 @@ const earthMat = new THREE.ShaderMaterial({
   `
 });
 
-const earthMesh = new THREE.Mesh(new THREE.SphereGeometry(1, 128, 128), earthMat);
+const earthMesh = new THREE.Mesh(new THREE.SphereGeometry(1, 96, 96), earthMat);   /* 96×96 */
 earthScene.add(earthMesh);
 
-/* ---------- Облака ---------- */
 const cloudUniforms = {
   sunDirection: { value: SUN_DIR.clone() },
   time:         { value: 0.0 },
@@ -181,10 +180,9 @@ const cloudMat = new THREE.ShaderMaterial({
   depthWrite: false
 });
 
-const cloudMesh = new THREE.Mesh(new THREE.SphereGeometry(1.012, 128, 128), cloudMat);
+const cloudMesh = new THREE.Mesh(new THREE.SphereGeometry(1.012, 96, 96), cloudMat);   /* 96×96 */
 earthScene.add(cloudMesh);
 
-/* ---------- Атмосфера ---------- */
 function makeAtmoMat(color, intensity, power) {
   return new THREE.ShaderMaterial({
     uniforms: { color: { value: new THREE.Color(color) }, intensity: { value: intensity } },
@@ -216,11 +214,10 @@ function makeAtmoMat(color, intensity, power) {
 const atmoInnerMat = makeAtmoMat(0x9ad2ff, 0.75, '4.0');
 const atmoOuterMat = makeAtmoMat(0x5aa0f0, 0.25, '2.5');
 
-const atmoInner = new THREE.Mesh(new THREE.SphereGeometry(1.025, 64, 64), atmoInnerMat);
-const atmoOuter = new THREE.Mesh(new THREE.SphereGeometry(1.12, 64, 64), atmoOuterMat);
+const atmoInner = new THREE.Mesh(new THREE.SphereGeometry(1.025, 48, 48), atmoInnerMat);
+const atmoOuter = new THREE.Mesh(new THREE.SphereGeometry(1.12, 48, 48), atmoOuterMat);
 earthScene.add(atmoInner, atmoOuter);
 
-/* ---------- Текстуры ---------- */
 texLoader.load('textures/earth.jpg', (tex) => {
   tex.anisotropy = earthRenderer.capabilities.getMaxAnisotropy();
   tex.encoding = THREE.sRGBEncoding;
@@ -241,9 +238,6 @@ texLoader.load('textures/night.jpg', (tex) => {
   console.log('[THREE] Земля (ночь) загружена');
 }, undefined, () => console.warn('[THREE] night.jpg не найден'));
 
-/* =========================================================
-   ЛОГИКА ЗЕМЛИ
-   ========================================================= */
 function updateEarth(km, dt) {
   dt = dt || 0.016;
 
@@ -279,7 +273,6 @@ function updateEarth(km, dt) {
   cloudUniforms.sunDirection.value.copy(SUN_DIR);
   cloudUniforms.time.value = globalTime;
 
-  /* === СОЛНЦЕ ФИКСИРОВАНО === */
   earthUniforms.sunDirection.value.copy(SUN_DIR);
 
   const lightsAmount = Math.min(1, Math.max(0, (km - 500) / 1000));
@@ -308,13 +301,10 @@ function updateEarth(km, dt) {
   earthRenderer.render(earthScene, earthCamera);
 }
 
-/* =========================================================
-   ЖЁСТКИЙ РЕСАЙЗ
-   ========================================================= */
 function resizeEarth() {
   const w = window.innerWidth;
   const h = window.innerHeight;
-  const dpr = Math.max(1, window.devicePixelRatio);
+  const dpr = Math.min(window.devicePixelRatio, 1.5);
 
   earthCanvas.width = Math.round(w * dpr);
   earthCanvas.height = Math.round(h * dpr);
