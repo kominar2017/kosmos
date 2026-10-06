@@ -1,15 +1,14 @@
 /* =========================================================
-   VOYAGER 3D — Вояджер-1
-   Пик на 24 млрд км (при милестоуне ms_voyager).
+   VOYAGER 3D — Вояджер-1. Pixel Ratio 1.5
    ========================================================= */
 
-const VOYAGER_APPEAR_KM = 20000000000;   /* 20 млрд км */
-const VOYAGER_PEAK_KM   = 24000000000;   /* 24 млрд км — пик */
-const VOYAGER_VANISH_KM = 28000000000;   /* 28 млрд км */
+const VOYAGER_APPEAR_KM = 20000000000;
+const VOYAGER_PEAK_KM   = 24000000000;
+const VOYAGER_VANISH_KM = 28000000000;
 
 const voyagerCanvas = document.getElementById('voyager3d');
 const voyagerRenderer = new THREE.WebGLRenderer({ canvas: voyagerCanvas, alpha: true, antialias: true });
-voyagerRenderer.setPixelRatio(window.devicePixelRatio);
+voyagerRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
 voyagerRenderer.setClearColor(0x000000, 0);
 voyagerRenderer.outputEncoding = THREE.sRGBEncoding;
 
@@ -18,7 +17,6 @@ const voyagerCamera = new THREE.PerspectiveCamera(60, window.innerWidth / window
 voyagerCamera.position.set(0, 0, 0);
 voyagerCamera.lookAt(0, 0, -1);
 
-/* Свет */
 voyagerScene.add(new THREE.AmbientLight(0xffffff, 1.2));
 const voyagerSun = new THREE.DirectionalLight(0xfff0e0, 1.6);
 voyagerSun.position.set(3, 5, -2);
@@ -30,14 +28,11 @@ voyagerScene.add(voyagerFill);
 let voyagerMesh = null;
 let voyagerLoaded = false;
 
-/* ============================
-   ТРАЕКТОРИЯ
-   ============================ */
 const VOYAGER_KEY_POINTS = [
   [ 20000000000,  -120,   +60,  -1500],
   [ 22000000000,   -60,   +40,   -700],
   [ 23500000000,   -10,   +15,   -250],
-  [ 24000000000,    -5,   -10,    -80],   /* ПИК */
+  [ 24000000000,    -5,   -10,    -80],
   [ 25000000000,   +30,   -25,   +150],
   [ 28000000000,  +100,   -40,   +350]
 ];
@@ -62,20 +57,14 @@ function getVoyagerTrajectory(km) {
   return { x: last[1], y: last[2], z: last[3] };
 }
 
-/* ============================
-   ЗАГРУЗКА МОДЕЛИ
-   ============================ */
 const voyagerLoader = new THREE.GLTFLoader();
-
-/* ⚠️ Проверь путь! Если модель в корне — 'models/voyager.glb' */
-/* Если в js/models — 'js/models/voyager.glb' */
 voyagerLoader.load('models/voyager.glb', (gltf) => {
   voyagerMesh = gltf.scene;
 
   const box = new THREE.Box3().setFromObject(voyagerMesh);
   const size = box.getSize(new THREE.Vector3());
   const maxDim = Math.max(size.x, size.y, size.z);
-  const targetSize = 80;   /* чуть меньше, чем у МКС (100) — Вояджер «тоньше» */
+  const targetSize = 80;
   voyagerMesh.scale.setScalar(targetSize / maxDim);
 
   voyagerMesh.traverse((node) => {
@@ -100,19 +89,16 @@ voyagerLoader.load('models/voyager.glb', (gltf) => {
   console.log('[THREE] Вояджер загружен');
 
   if (typeof notifyVoyagerLoaded === 'function') notifyVoyagerLoaded();
-
 }, undefined, () => {
   console.warn('[THREE] voyager.glb не найден');
   if (typeof notifyVoyagerFailed === 'function') notifyVoyagerFailed();
 });
 
-/* ============================
-   РЕСАЙЗ
-   ============================ */
 function resizeVoyager() {
   const w = window.innerWidth;
   const h = window.innerHeight;
-  voyagerRenderer.setPixelRatio(window.devicePixelRatio);
+  const dpr = Math.min(window.devicePixelRatio, 1.5);
+  voyagerRenderer.setPixelRatio(dpr);
   voyagerRenderer.setSize(w, h, false);
   voyagerCamera.aspect = w / h;
   voyagerCamera.updateProjectionMatrix();
@@ -121,9 +107,6 @@ resizeVoyager();
 window.addEventListener('resize', resizeVoyager);
 window.addEventListener('load', resizeVoyager);
 
-/* ============================
-   ОБНОВЛЕНИЕ
-   ============================ */
 function updateVoyager(km, dt) {
   dt = dt || 0.016;
   if (typeof orbitMode !== 'undefined' && orbitMode) return;

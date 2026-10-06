@@ -1,6 +1,6 @@
 /* =========================================================
    MAIN — главный цикл анимации
-   Оптимизация: рендерим только видимые объекты
+   Все updateXxx вызываются всегда, каждая сама решает
    ========================================================= */
 
 function animate(now) {
@@ -14,9 +14,6 @@ function animate(now) {
     return requestAnimationFrame(animate);
   }
 
-  const km = getCurrentKm();
-  const kmNum = Number(km);
-
   if (reviewMode && reviewPlaying) {
     reviewSliderPos += PLAY_SPEED * dt;
     if (reviewSliderPos >= 1000) {
@@ -29,6 +26,9 @@ function animate(now) {
     reviewKmLabel.textContent = formatKmNumber(viewKm);
     distanceEl.textContent = formatDistance(BigInt(Math.round(viewKm)));
   }
+
+  const km = getCurrentKm();
+  const kmNum = Number(km);
 
   clickEnergy -= CLICK_ENERGY_DECAY * dt;
   if (clickEnergy < 0) clickEnergy = 0;
@@ -56,55 +56,20 @@ function animate(now) {
   drawParticles(dt);
   drawSun(km);
 
-  /* === 3D-ОБЪЕКТЫ — ТОЛЬКО ВИДИМЫЕ === */
+  /* === 3D-ОБЪЕКТЫ — вызываем ВСЕ, каждая сама решает === */
 
-  if (kmNum >= 100 && kmNum <= 384400) {
-    updateEarth(km, dt);
-  }
-
-  if (kmNum >= 80000 && kmNum <= 550000) {
-    updateMoon(km, dt);
-  }
-
-  if (kmNum >= 224574000 && kmNum <= 225232000) {
-    updateMars(km, dt);
-  }
-
-  if (kmNum >= 627220000 && kmNum <= 628780000) {
-    updateJupiter(km, dt);
-  }
-
-  if (kmNum >= 1273640000 && kmNum <= 1276360000) {
-    updateSaturn(km, dt);
-  }
-
-  if (kmNum >= 2722100000 && kmNum <= 2723900000) {
-    updateUranus(km, dt);
-  }
-
-  if (kmNum >= 4350115000 && kmNum <= 4351885000) {
-    updateNeptune(km, dt);
-  }
-
-  if (kmNum >= 5905610000 && kmNum <= 5906390000) {
-    updatePluto(km, dt);
-  }
-
-  if (kmNum >= 385 && kmNum <= 405) {
-    updateISS(km, dt);
-  }
-
-  if (kmNum >= 20000000000 && kmNum <= 28000000000) {
-    updateVoyager(km, dt);
-  }
-
-  if (kmNum >= 300000000 && kmNum <= 500000000) {
-    updateAsteroids(km, dt);
-  }
-
-  if (kmNum >= 4500000000 && kmNum <= 8000000000) {
-    updateKuiper(km, dt);
-  }
+  updateEarth(km, dt);
+  updateMoon(km, dt);
+  updateMars(km, dt);
+  updateJupiter(km, dt);
+  updateSaturn(km, dt);
+  updateUranus(km, dt);
+  updateNeptune(km, dt);
+  updatePluto(km, dt);
+  updateISS(km, dt);
+  updateVoyager(km, dt);
+  updateAsteroids(km, dt);
+  updateKuiper(km, dt);
 
   drawScale();
 

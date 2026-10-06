@@ -1,7 +1,6 @@
 /* =========================================================
    KUIPER 3D — пояс Койпера (4.5–8 млрд км)
-   Ледяные камни РАЗНЫХ оттенков голубого.
-   Летят на зрителя, как астероиды.
+   Оптимизация: 14 объектов вместо 22, Pixel Ratio 1
    ========================================================= */
 
 const KUIPER_APPEAR_KM = 4500000000;
@@ -34,20 +33,11 @@ const kuiperSun = new THREE.DirectionalLight(0xffffff, 1.5);
 kuiperSun.position.set(3, 5, -2);
 kuiperScene.add(kuiperSun);
 
-/* ---------- Палитра: 12 оттенков голубого/белого/фиолетового ---------- */
+/* ---------- Палитра: голубые тона ---------- */
 const KUIPER_COLORS = [
-  0xd8f0ff,   /* 1. почти белый */
-  0xa8e0f8,   /* 2. светло-голубой */
-  0x88c8f0,   /* 3. голубой */
-  0x68b0e0,   /* 4. синий */
-  0x98d0e8,   /* 5. бирюзовый */
-  0xb8d8f0,   /* 6. серо-голубой */
-  0xc8e0f8,   /* 7. нежно-голубой */
-  0x98c8e8,   /* 8. средний голубой */
-  0xa8c8e0,   /* 9. серо-синий */
-  0xd0e8f8,   /* 10. белый с голубым */
-  0xb0d0e8,   /* 11. светло-синий */
-  0xc0d8f0    /* 12. фиолетово-голубой */
+  0xd8f0ff, 0xa8e0f8, 0x88c8f0, 0x68b0e0,
+  0x98d0e8, 0xb8d8f0, 0xc8e0f8, 0x98c8e8,
+  0xa8c8e0, 0xd0e8f8, 0xb0d0e8, 0xc0d8f0
 ];
 
 /* ---------- Геометрия: неровный икосаэдр ---------- */
@@ -69,7 +59,6 @@ function randomKuiperGeometry() {
   const geo = new THREE.IcosahedronGeometry(1, detail);
   const pos = geo.attributes.position;
 
-  /* Форма — вытянутая или плоская */
   const formRoll = Math.random();
   let stretchX = 1, stretchY = 1, stretchZ = 1;
   if (formRoll < 0.25) {
@@ -80,7 +69,6 @@ function randomKuiperGeometry() {
     stretchY = 0.4 + Math.random() * 0.4;
   }
 
-  /* Bump-центры — плавные выпуклости */
   const bumps = [];
   const bumpCount = 3 + Math.floor(Math.random() * 4);
   for (let b = 0; b < bumpCount; b++) {
@@ -94,7 +82,6 @@ function randomKuiperGeometry() {
     });
   }
 
-  /* Сколы — вмятины */
   const chips = [];
   const chipCount = Math.floor(Math.random() * 3);
   for (let c = 0; c < chipCount; c++) {
@@ -150,8 +137,8 @@ function randomKuiperGeometry() {
   return geo;
 }
 
-/* ---------- Пул ---------- */
-const KUIPER_COUNT = 22;
+/* ---------- Пул: 14 объектов (было 22) ---------- */
+const KUIPER_COUNT = 14;
 const kuipers = [];
 
 const K_Z_NEAR = -50;
@@ -168,7 +155,6 @@ function respawnKuiper(a) {
   a.mesh.position.x = (Math.random() - 0.5) * visibleWidth * 1.4;
   a.mesh.position.y = (Math.random() - 0.5) * visibleHeight * 1.4;
 
-  /* Размеры — от мелких до крупных */
   const roll = Math.random();
   let size;
   if (roll < 0.5) {

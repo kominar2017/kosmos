@@ -1,5 +1,5 @@
 /* =========================================================
-   ISS 3D — МКС. Пик на 398 — прямо по центру, над цифрой 400.
+   ISS 3D — МКС. Pixel Ratio 1.5
    ========================================================= */
 
 const ISS_APPEAR_KM = 385;
@@ -8,7 +8,7 @@ const ISS_VANISH_KM = 405;
 
 const issCanvas = document.getElementById('iss3d');
 const issRenderer = new THREE.WebGLRenderer({ canvas: issCanvas, alpha: true, antialias: true });
-issRenderer.setPixelRatio(window.devicePixelRatio);
+issRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
 issRenderer.setClearColor(0x000000, 0);
 issRenderer.outputEncoding = THREE.sRGBEncoding;
 
@@ -17,7 +17,6 @@ const issCamera = new THREE.PerspectiveCamera(60, window.innerWidth / window.inn
 issCamera.position.set(0, 0, 0);
 issCamera.lookAt(0, 0, -1);
 
-/* Свет */
 issScene.add(new THREE.AmbientLight(0xffffff, 1.0));
 const issSun = new THREE.DirectionalLight(0xfff0e0, 1.6);
 issSun.position.set(3, 5, -2);
@@ -29,9 +28,6 @@ issScene.add(issFill);
 let issMesh = null;
 let issLoaded = false;
 
-/* ============================
-   КЛЮЧЕВЫЕ ТОЧКИ ТРАЕКТОРИИ
-   ============================ */
 const KEY_POINTS = [
   [ 385,  -120,   +60,  -1500],
   [ 390,   -60,   +40,   -700],
@@ -93,7 +89,6 @@ issLoader.load('models/iss.glb', (gltf) => {
   console.log('[THREE] МКС загружена');
 
   if (typeof notifyISSLoaded === 'function') notifyISSLoaded();
-
 }, undefined, () => {
   console.warn('[THREE] iss.glb не найден');
   if (typeof notifyISSFailed === 'function') notifyISSFailed();
@@ -102,7 +97,8 @@ issLoader.load('models/iss.glb', (gltf) => {
 function resizeISS() {
   const w = window.innerWidth;
   const h = window.innerHeight;
-  issRenderer.setPixelRatio(window.devicePixelRatio);
+  const dpr = Math.min(window.devicePixelRatio, 1.5);
+  issRenderer.setPixelRatio(dpr);
   issRenderer.setSize(w, h, false);
   issCamera.aspect = w / h;
   issCamera.updateProjectionMatrix();
@@ -113,21 +109,18 @@ window.addEventListener('load', resizeISS);
 
 function updateISS(km, dt) {
   dt = dt || 0.016;
-
-  /* В orbit-режиме updateISS не трогаем — updateOrbit сам всё делает */
   if (typeof orbitMode !== 'undefined' && orbitMode) return;
 
   if (!issLoaded || !issMesh) {
-    issCanvas.style.opacity = '0';   /* ← было display: none */
+    issCanvas.style.display = 'none';
     return;
   }
 
   if (km < ISS_APPEAR_KM || km > ISS_VANISH_KM) {
-    issCanvas.style.opacity = '0';   /* ← было display: none */
+    issCanvas.style.display = 'none';
     return;
   }
 
-  /* display всегда block — управляем только opacity */
   issCanvas.style.display = 'block';
 
   const pos = getTrajectory(km);

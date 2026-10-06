@@ -1,5 +1,6 @@
 /* =========================================================
    ORBIT — режим обзора
+   DPR 1.5 для всех планетных рендереров
    ========================================================= */
 
 let orbitMode = false;
@@ -27,6 +28,31 @@ const ORBIT_OBJECT_LIST = [
   { key: 'iss',     i18n: 'orbitISS' },
   { key: 'voyager', i18n: 'orbitVoyager' }
 ];
+
+/* ---------- Применяем DPR 1.5 ко всем планетным рендерерам ---------- */
+function applyOrbitDPR() {
+  const dpr = Math.min(window.devicePixelRatio, 1.5);
+
+  const planetRenderers = [
+    earthRenderer, moonRenderer, marsRenderer, jupiterRenderer,
+    saturnRenderer, uranusRenderer, neptuneRenderer, plutoRenderer,
+    issRenderer, voyagerRenderer
+  ];
+
+  for (const r of planetRenderers) {
+    if (r && typeof r.setPixelRatio === 'function') {
+      r.setPixelRatio(dpr);
+    }
+  }
+
+  /* Пояса оставляем на DPR 1 — оптимизация */
+  if (typeof asteroidsRenderer !== 'undefined' && asteroidsRenderer) {
+    asteroidsRenderer.setPixelRatio(1);
+  }
+  if (typeof kuiperRenderer !== 'undefined' && kuiperRenderer) {
+    kuiperRenderer.setPixelRatio(1);
+  }
+}
 
 function getOrbitObject(target) {
   switch (target) {
@@ -198,6 +224,9 @@ function enterOrbit() {
   orbitBtn.style.display = 'none';
   document.getElementById('reviewBtn').style.display = 'none';
 
+  /* Применяем DPR 1.5 ко всем рендерерам */
+  applyOrbitDPR();
+
   if (!orbitUI) {
     buildOrbitUI();
     window.addEventListener('keydown', (e) => { if (e.code === 'Escape' && orbitMode) exitOrbit(); });
@@ -259,8 +288,11 @@ function updateOrbit() {
   if (!obj) return;
 
   const nowAspect = window.innerWidth / window.innerHeight;
+  const dpr = Math.min(window.devicePixelRatio, 1.5);
+
   if (Math.abs(obj.camera.aspect - nowAspect) > 0.001) {
     obj.camera.aspect = nowAspect;
+    obj.renderer.setPixelRatio(dpr);
     obj.renderer.setSize(window.innerWidth, window.innerHeight, false);
     obj.camera.updateProjectionMatrix();
   }
