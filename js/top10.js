@@ -1,10 +1,12 @@
 /* =========================================================
    TOP-10 — раскрывающийся список лидеров
+   Отправка рекорда только при улучшении (без дублей)
    ========================================================= */
 
 const TOP_API = 'https://closer2stars.com/api';
 let topRefreshTimer = null;
 let topOpen = false;
+let lastSubmittedKm = 0;
 
 /* --- Получить имя игрока --- */
 function getPlayerName() {
@@ -18,11 +20,23 @@ function getPlayerName() {
   return name;
 }
 
-/* --- Отправить рекорд --- */
+/* --- Отправить рекорд (только если улучшился) --- */
 async function submitScore() {
   const name = getPlayerName();
   const km = Number(distance);
+
+  // Не отправляем мелочь
   if (km < 100) return;
+
+  // Не отправляем, если рекорд не улучшился
+  if (km <= lastSubmittedKm) return;
+
+  // Проверяем localStorage — не отправляли ли уже этот рекорд
+  const savedBest = Number(localStorage.getItem('space_best_km') || 0);
+  if (km <= savedBest) {
+    lastSubmittedKm = savedBest;
+    return;
+  }
 
   try {
     await fetch(`${TOP_API}/score`, {
@@ -30,6 +44,9 @@ async function submitScore() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name, km })
     });
+    lastSubmittedKm = km;
+    localStorage.setItem('space_best_km', String(km));
+    console.log('[TOP10] Рекорд отправлен:', km);
   } catch (e) {
     console.warn('[TOP10] Ошибка отправки:', e);
   }
@@ -101,7 +118,6 @@ function escapeHtml(str) {
 /* --- Инициализация --- */
 function initTop10() {
   const toggleBtn = document.getElementById('top10Toggle');
-  const dropdown = document.getElementById('top10Dropdown');
 
   if (toggleBtn) {
     toggleBtn.addEventListener('click', (e) => {
@@ -110,15 +126,20 @@ function initTop10() {
     });
   }
 
-  // Закрытие при клике вне
   document.addEventListener('click', (e) => {
     if (!topOpen) return;
     if (e.target.closest('#top10Dropdown')) return;
     toggleTop10();
   });
 
-  // Отправка рекорда раз в 30 секунд
+  // Загружаем сохранённый рекорд из localStorage
+  const saved = Number(localStorage.getItem('space_best_km') || 0);
+  if (saved > 0) lastSubmittedKm = saved;
+
+  // Отправка рекорда раз в 30 секунд (только если улучшился)
   setInterval(submitScore, 30000);
+  // И сразу через 5 секунд после загрузки
+  setTimeout(submitScore, 5000);
 }
 
 if (document.readyState === 'loading') {
